@@ -39,25 +39,26 @@ const $=s=>document.querySelector(s),esc=v=>String(v??'').replace(/[&<>"']/g,c=>
 eur=v=>Number(v).toLocaleString('it-IT',{style:'currency',currency:'EUR'}),thisM=()=>new Date().toISOString().slice(0,7);
 
 /* ===== Motore locale: i dati restano su questo dispositivo (IndexedDB) ===== */
-const TABLES=['apartments','rooms','tenants','contracts','rent_dues','payments','expense_types','expenses','allocations','allocation_shares','documents'];
+const TABLES=['apartments','rooms','tenants','contracts','rent_dues','payments','expense_types','expenses','allocations','allocation_shares','share_payments','documents'];
 const COLS={apartments:'name,address,city,rooms,beds,description,notes',rooms:'apartment_id,name,beds',tenants:'first_name,last_name,tax_code,phone,email,notes',
  contracts:'tenant_id,apartment_id,room_id,start_date,end_date,monthly_rent,due_day,notes',payments:'due_id,paid_on,amount,method,notes',
- expenses:'apartment_id,type_id,description,amount,spent_on,period_from,period_to,supplier,notes',expense_types:'name'};
+ expenses:'apartment_id,type_id,description,amount,spent_on,period_from,period_to,supplier,notes',expense_types:'name',share_payments:'share_id,paid_on,amount,method,notes'};
 const REQ={apartments:['name','address','city'],rooms:['apartment_id','name'],tenants:['first_name','last_name'],contracts:['tenant_id','apartment_id','start_date','monthly_rent'],
- payments:['due_id','paid_on','amount'],expenses:['apartment_id','amount','spent_on','period_from','period_to'],expense_types:['name']};
+ payments:['due_id','paid_on','amount'],expenses:['apartment_id','amount','spent_on','period_from','period_to'],expense_types:['name'],share_payments:['share_id','paid_on','amount']};
 const NUM=['rooms','beds','monthly_rent','due_day','amount'],FK={tenants:[['contracts','tenant_id']],apartments:[['contracts','apartment_id'],['expenses','apartment_id']],expense_types:[['expenses','type_id']],rooms:[['contracts','room_id']]},
  CAS={contracts:[['rent_dues','contract_id']],rent_dues:[['payments','due_id']],expenses:[['allocations','expense_id'],['documents','expense_id']],allocations:[['allocation_shares','allocation_id']],apartments:[['rooms','apartment_id']]};
 let DB;const P=r=>new Promise((ok,ko)=>{r.onsuccess=()=>ok(r.result);r.onerror=()=>ko(r.error)}),
  all=t=>P(DB.transaction(t).objectStore(t).getAll()),get=(t,id)=>P(DB.transaction(t).objectStore(t).get(id)),
  put=async(t,o)=>({...o,id:await P(DB.transaction(t,'readwrite').objectStore(t).put(o))}),
  sum0=a=>a.reduce((s,x)=>s+x,0),sumk=(a,k)=>a.reduce((s,x)=>s+x[k],0),today=()=>new Date().toISOString().slice(0,10);
-async function rm(t,id){if(t=='contracts'){const ds=(await all('rent_dues')).filter(d=>d.contract_id===id).map(d=>d.id);if((await all('payments')).some(p=>ds.includes(p.due_id)))throw'Il contratto ha pagamenti registrati: per conservare lo storico imposta la data di uscita invece di eliminarlo'}for(const[c,k]of FK[t]||[])if((await all(c)).some(x=>x[k]===id))throw'Impossibile eliminare: ci sono dati collegati (storico da conservare)';
+async function rm(t,id){if(t=='allocations'){const ss=(await all('allocation_shares')).filter(s=>s.allocation_id===id).map(s=>s.id);if((await all('share_payments')).some(p=>ss.includes(p.share_id)))throw'Ci sono incassi registrati su questa ripartizione: eliminali prima (menu Incassi spese)'}if(t=='contracts'){const ds=(await all('rent_dues')).filter(d=>d.contract_id===id).map(d=>d.id);if((await all('payments')).some(p=>ds.includes(p.due_id)))throw'Il contratto ha pagamenti registrati: per conservare lo storico imposta la data di uscita invece di eliminarlo'}for(const[c,k]of FK[t]||[])if((await all(c)).some(x=>x[k]===id))throw'Impossibile eliminare: ci sono dati collegati (storico da conservare)';
  for(const[c,k]of CAS[t]||[])for(const x of await all(c))if(x[k]===id)await rm(c,x.id);await P(DB.transaction(t,'readwrite').objectStore(t).delete(id))}
 function norm(t,b){const o={};for(const k of COLS[t].split(',')){let v=b[k];if(v===''||v===undefined)v=null;else if(k.endsWith('_id')||NUM.includes(k))v=Number(String(v).replace(',','.'));o[k]=v}if(b.id)o.id=Number(b.id);return o}
-async function check(t,o){if(t=='payments'){const du=(await duesRows()).find(d=>d.id===o.due_id);if(du&&o.amount>du.remaining+.005)throw"L'importo supera il residuo ("+du.remaining.toFixed(2)+" €)"}
+async function check(t,o){if(t=='share_payments'){const sr=(await sharesRows()).find(s=>s.id===o.share_id);if(sr&&o.amount>sr.remaining+.005)throw"L'importo supera il residuo ("+sr.remaining.toFixed(2)+" €)"}
+ if(t=='payments'){const du=(await duesRows()).find(d=>d.id===o.due_id);if(du&&o.amount>du.remaining+.005)throw"L'importo supera il residuo ("+du.remaining.toFixed(2)+" €)"}
  if(t=='contracts'&&o.due_day&&(o.due_day<1||o.due_day>28))throw'Il giorno di scadenza deve essere tra 1 e 28';
  if(t=='tenants'&&o.tax_code){o.tax_code=o.tax_code.toUpperCase().trim();if(!/^[A-Z0-9]{16}$/.test(o.tax_code))throw'Codice fiscale non valido (16 caratteri)'}for(const k of REQ[t]||[])if(o[k]==null||Number.isNaN(o[k]))throw'Compila il campo obbligatorio: '+k;
- if((t=='payments'||t=='expenses')&&o.amount<=0)throw'L\'importo deve essere maggiore di zero';
+ if((t=='payments'||t=='expenses'||t=='share_payments')&&o.amount<=0)throw'L\'importo deve essere maggiore di zero';
  if(t=='contracts'){if(o.end_date&&o.end_date<o.start_date)throw'La data di uscita precede quella di ingresso';
   if(o.room_id)for(const c of await all('contracts'))if(c.id!==o.id&&c.room_id===o.room_id&&o.start_date<=(c.end_date||'9999')&&c.start_date<=(o.end_date||'9999'))throw'La camera è già assegnata in quel periodo'}
  if(t=='expenses'&&o.period_to<o.period_from)throw'Periodo di competenza non valido'}
@@ -72,6 +73,10 @@ async function duesRows(month){const[D,C,Te,Ap,Pa]=await Promise.all(['rent_dues
  return D.filter(d=>!month||d.month.slice(0,7)===month).map(d=>{const c=C.find(x=>x.id===d.contract_id),t=Te.find(x=>x.id===c.tenant_id),paid=sumk(Pa.filter(p=>p.due_id===d.id),'amount'),rem=Math.round((d.amount-paid)*100)/100;
   return{id:d.id,month:d.month,amount:d.amount,tenant:t.first_name+' '+t.last_name,apartment:Ap.find(x=>x.id===c.apartment_id).name,apt:c.apartment_id,paid,remaining:rem,late:rem>0&&d.month.slice(0,8)+String(c.due_day||5).padStart(2,'0')<today()}})
  .sort((a,b)=>b.month.localeCompare(a.month)||a.apartment.localeCompare(b.apartment))}
+async function sharesRows(){const[Al,Sh,SP,E,Te,Ap,Ty]=await Promise.all(['allocations','allocation_shares','share_payments','expenses','tenants','apartments','expense_types'].map(all));
+ return Sh.map(s=>{const al=Al.find(a=>a.id===s.allocation_id),e=al&&E.find(x=>x.id===al.expense_id);if(!e)return null;const t=Te.find(x=>x.id===s.tenant_id),pays=SP.filter(p=>p.share_id===s.id).sort((x,y)=>y.paid_on.localeCompare(x.paid_on)||y.id-x.id),pc=sum0(pays.map(p=>Math.round(p.amount*100)));
+  return{id:s.id,expense_id:e.id,desc:e.description||Ty.find(x=>x.id===e.type_id)?.name||'Spesa',spent_on:e.spent_on,apt:e.apartment_id,apartment:Ap.find(x=>x.id===e.apartment_id)?.name||'',tenant_id:s.tenant_id,tenant:t.first_name+' '+t.last_name,
+   final:s.final_cents/100,paid:pc/100,remaining:(s.final_cents-pc)/100,payments:pays}}).filter(Boolean).sort((a,b)=>b.spent_on.localeCompare(a.spent_on)||a.tenant.localeCompare(b.tenant))}
 async function route(p,o){const m=o.method||'GET',b=o.body,[path,qs]=p.split('?'),a=path.split('/'),Q=new URLSearchParams(qs||'');
  if(COLS[a[0]]&&a.length<3){const t=a[0];if(m=='GET')return(await all(t)).sort((x,y)=>y.id-x.id);
   if(m=='DELETE'){await rm(t,+a[1]);return{ok:1}}const x=norm(t,b);if(a[1])x.id=+a[1];await check(t,x);
@@ -82,11 +87,17 @@ async function route(p,o){const m=o.method||'GET',b=o.body,[path,qs]=p.split('?'
  if(path=='dues')return duesRows(Q.get('month'));
  if(path=='dues/generate'){const mo=b.month+'-01',last=new Date(Date.UTC(+b.month.slice(0,4),+b.month.slice(5),0)).toISOString().slice(0,10),D=await all('rent_dues');let n=0;
   for(const c of await all('contracts'))if(c.start_date<=last&&(!c.end_date||c.end_date>=mo)&&!D.some(d=>d.contract_id===c.id&&d.month===mo)){await put('rent_dues',{contract_id:c.id,month:mo,amount:c.monthly_rent});n++}return{created:n}}
- if(path=='dashboard'){const mo=Q.get('month'),R=await duesRows(mo),Ex=await all('expenses'),Ap=await all('apartments'),t0=today();
-  return{per:Ap.sort((x,y)=>x.name.localeCompare(y.name)).map(q=>({id:q.id,name:q.name,expected:sumk(R.filter(d=>d.apt===q.id),'amount'),collected:sumk(R.filter(d=>d.apt===q.id),'paid'),expenses:sumk(Ex.filter(e=>e.apartment_id===q.id&&e.spent_on.slice(0,7)===mo),'amount')})),
+ if(path=='shares_due')return sharesRows();
+ if(path=='dashboard'){const mo=Q.get('month'),R=await duesRows(mo),Ex=await all('expenses'),Ap=await all('apartments'),t0=today(),SR=await sharesRows(),AD=await duesRows(),cm=thisM(),r2=v=>Math.round(v*100)/100,alIds=new Set((await all('allocations')).map(a=>a.expense_id)),
+   open=AD.filter(d=>d.remaining>0),arrears=r2(sumk(open.filter(d=>d.month.slice(0,7)<cm),'remaining')),current=r2(sumk(open.filter(d=>d.month.slice(0,7)===cm),'remaining')),expDue=r2(sumk(SR,'remaining'));
+  return{per:Ap.sort((x,y)=>x.name.localeCompare(y.name)).map(q=>({id:q.id,name:q.name,expected:sumk(R.filter(d=>d.apt===q.id),'amount'),collected:sumk(R.filter(d=>d.apt===q.id),'paid'),expenses:sumk(Ex.filter(e=>e.apartment_id===q.id&&e.spent_on.slice(0,7)===mo),'amount'),
+    expToCollect:r2(sumk(SR.filter(s=>s.apt===q.id&&s.spent_on.slice(0,7)===mo),'remaining'))})),
+   expMonthDue:r2(sumk(SR.filter(s=>s.spent_on.slice(0,7)===mo),'remaining')),shareList:SR.filter(s=>s.remaining>0),unallocated:Ex.filter(e=>!alIds.has(e.id)).length,
+   asOf:{arrears,arrearsN:open.filter(d=>d.month.slice(0,7)<cm).length,current,expDue,total:r2(arrears+current+expDue)},
    k:{apartments:Ap.length,tenants:new Set((await all('contracts')).filter(c=>c.start_date<=t0&&(!c.end_date||c.end_date>=t0)).map(c=>c.tenant_id)).size}}}
  if(a[0]=='expenses'){const e=await get('expenses',+a[1]);if(!e)throw'Spesa non trovata';
   if(a[2]=='tenants')return involved(e);
+  if(a[2]=='collect')return(await sharesRows()).filter(s=>s.expense_id===e.id);
   if(a[2]=='allocation'){const al=(await all('allocations')).find(x=>x.expense_id===e.id);if(!al)return null;const Te=await all('tenants');
    return{...al,shares:(await all('allocation_shares')).filter(s=>s.allocation_id===al.id).map(s=>{const t=Te.find(x=>x.id===s.tenant_id);return{...s,tenant:t.first_name+' '+t.last_name}})}}
   if(a[2]=='allocate'){const{criterion,values={}}=b,T=await involved(e);if(!T.length)throw'Nessun inquilino con contratto nel periodo di competenza';
@@ -102,12 +113,13 @@ async function route(p,o){const m=o.method||'GET',b=o.body,[path,qs]=p.split('?'
    return put('documents',{expense_id:e.id,filename:f.name,mime:f.type,blob:f})}}
  if(a[0]=='allocations'&&a[2]=='shares'){const al=await get('allocations',+a[1]),L=b.shares;
   if(L.reduce((s,x)=>s+Math.round(x.final*100),0)!==al.total_cents)throw'Il totale delle quote deve coincidere con la spesa';
+  const SP=await all('share_payments');for(const x of L){const pd=sum0(SP.filter(p=>p.share_id===+x.id).map(p=>Math.round(p.amount*100)));if(Math.round(x.final*100)<pd)throw'Una quota è inferiore a quanto già incassato ('+(pd/100).toFixed(2)+' €): elimina prima l\'incasso'}
   for(const x of L){const s=await get('allocation_shares',+x.id);s.final_cents=Math.round(x.final*100);s.modified=s.final_cents!==s.calc_cents;await put('allocation_shares',s)}return{ok:1}}
  throw'Operazione non supportata'}
 async function api(p,o={}){try{return await route(p,o)}catch(e){alert(typeof e==='string'?e:'Errore: '+(e?.message||e));throw 0}}
 function doPrint(){$('#pa').innerHTML=$('#pr').innerHTML;print()}
 const N=v=>Number(String(v??'').replace(',','.'))||0;
-async function initDB(){DB=await new Promise((ok,ko)=>{const r=indexedDB.open('affitti',1);r.onupgradeneeded=()=>TABLES.forEach(t=>r.result.createObjectStore(t,{keyPath:'id',autoIncrement:true}));r.onsuccess=()=>ok(r.result);r.onerror=()=>ko(r.error)});
+async function initDB(){DB=await new Promise((ok,ko)=>{const r=indexedDB.open('affitti',2);r.onupgradeneeded=()=>TABLES.forEach(t=>{if(!r.result.objectStoreNames.contains(t))r.result.createObjectStore(t,{keyPath:'id',autoIncrement:true})});r.onsuccess=()=>ok(r.result);r.onerror=()=>ko(r.error)});
  if(!(await all('expense_types')).length)for(const n of['Elettricità','Gas','Acqua','Riscaldamento','Internet','Spese condominiali','Manutenzione','Tassa rifiuti','Altro'])await put('expense_types',{name:n});
  navigator.storage?.persist?.();
  try{if((await all('apartments')).length&&Date.now()-(+localStorage.lastBackup||0)>14*864e5)setTimeout(backupUI,800)}catch{}}
@@ -125,17 +137,17 @@ function backupUI(){const d=$('#dlg');d.innerHTML=`<h3>Backup dei dati</h3><p>I 
  $('#im').onchange=async e=>{const f=e.target.files[0];if(f&&confirm('Il ripristino SOSTITUISCE tutti i dati attuali. Continuare?'))try{await importAll(await f.text());alert('Ripristino completato');d.close();dash()}catch{alert('File di backup non valido')}}}
 async function localReport(kind,p){try{if(!p.apartment)throw'Seleziona un appartamento';
  const ap=await get('apartments',+p.apartment),ex=(await all('expenses')).filter(e=>e.apartment_id===ap.id&&e.spent_on>=p.from&&e.spent_on<=p.to).sort((x,y)=>x.spent_on.localeCompare(y.spent_on)),
-  ty=await all('expense_types'),te=await all('tenants'),als=await all('allocations'),shs=await all('allocation_shares');let sh=[];
+  ty=await all('expense_types'),te=await all('tenants'),als=await all('allocations'),shs=await all('allocation_shares'),sp=await all('share_payments');let sh=[];
  for(const e of ex){e.type=ty.find(t=>t.id===e.type_id)?.name||'';const al=als.find(x=>x.expense_id===e.id);
-  if(al)for(const s of shs.filter(s=>s.allocation_id===al.id)){const t=te.find(x=>x.id===s.tenant_id);sh.push({...s,expense_id:e.id,criterion:al.criterion,tenant:t.first_name+' '+t.last_name})}}
+  if(al)for(const s of shs.filter(s=>s.allocation_id===al.id)){const t=te.find(x=>x.id===s.tenant_id);sh.push({...s,expense_id:e.id,criterion:al.criterion,tenant:t.first_name+' '+t.last_name,paid:sum0(sp.filter(q=>q.share_id===s.id).map(q=>Math.round(q.amount*100)))})}}
  if(p.tenant)sh=sh.filter(s=>s.tenant_id==p.tenant);
- if(kind=='csv'){const rows=[['Data','Tipo','Descrizione','Importo','Criterio','Inquilino','Quota']];
-  for(const e of ex){const l=sh.filter(x=>x.expense_id===e.id);if(!l.length)rows.push([e.spent_on,e.type,e.description,e.amount,'','','']);else l.forEach(x=>rows.push([e.spent_on,e.type,e.description,e.amount,x.criterion,x.tenant,(x.final_cents/100).toFixed(2)]))}
+ if(kind=='csv'){const rows=[['Data','Tipo','Descrizione','Importo','Criterio','Inquilino','Quota','Incassato','Da incassare']];
+  for(const e of ex){const l=sh.filter(x=>x.expense_id===e.id);if(!l.length)rows.push([e.spent_on,e.type,e.description,e.amount,'','','','','']);else l.forEach(x=>rows.push([e.spent_on,e.type,e.description,e.amount,x.criterion,x.tenant,(x.final_cents/100).toFixed(2),(x.paid/100).toFixed(2),((x.final_cents-x.paid)/100).toFixed(2)]))}
   return fileDlg('report.csv',new Blob(['\ufeff'+rows.map(r=>r.map(v=>`"${String(v??'').replace(/"/g,'""')}"`).join(';')).join('\n')],{type:'text/csv'}),'Report CSV')}
- const by={};sh.forEach(x=>by[x.tenant]=(by[x.tenant]||0)+x.final_cents);const tot=sum0(ex.map(e=>Math.round(e.amount*100)));
+ const by={};sh.forEach(x=>{const b=by[x.tenant]||(by[x.tenant]={q:0,p:0});b.q+=x.final_cents;b.p+=x.paid});const tot=sum0(ex.map(e=>Math.round(e.amount*100)));
  $('#dlg').innerHTML=`<div class=fb><div id=pr><h2>Ripartizione spese</h2><p><b>${esc(ap.name)}</b> — ${esc(ap.address)}, ${esc(ap.city)}<br>Periodo: ${p.from} / ${p.to}</p><h3>Spese sostenute</h3>
   <table>${ex.map(e=>`<tr><td>${e.spent_on}<td>${esc(e.type)}<td>${esc(e.description)}<td>${eur(e.amount)}<td>${e.period_from} / ${e.period_to}</tr>`).join('')}</table><p><b>Totale spese: ${eur(tot/100)}</b></p>
-  <h3>Quote per inquilino</h3><p>Criterio: ${esc([...new Set(sh.map(x=>x.criterion))].join(', ')||'nessuna ripartizione registrata')}</p><table>${Object.entries(by).map(([n,v])=>`<tr><td>${esc(n)}<td>${eur(v/100)}</tr>`).join('')}</table>
+  <h3>Quote per inquilino</h3><p>Criterio: ${esc([...new Set(sh.map(x=>x.criterion))].join(', ')||'nessuna ripartizione registrata')}</p><table><tr><th>Inquilino<th>Quota<th>Incassato<th>Da incassare</tr>${Object.entries(by).map(([n,v])=>`<tr><td>${esc(n)}<td>${eur(v.q/100)}<td>${eur(v.p/100)}<td>${eur((v.q-v.p)/100)}</tr>`).join('')}</table>
   ${ex.some(e=>!als.find(x=>x.expense_id===e.id))?'<p><i>Attenzione: alcune spese non sono ancora ripartite.</i></p>':''}${sh.some(x=>x.modified)?'<p><i>Alcune quote sono state modificate manualmente.</i></p>':''}</div></div><div class=ft><button onclick="doPrint()">Stampa / Salva PDF</button><button class=sec onclick="$('#dlg').close()">Chiudi</button></div>`;$('#dlg').showModal()}
  catch(e){alert(typeof e==='string'?e:'Errore: '+(e?.message||e))}}
 
@@ -146,7 +158,7 @@ const S={apartments:['Appartamenti',[['name','Nome'],['address','Indirizzo'],['c
  rooms:['Camere',[A,['name','Camera'],['beds','Posti letto','number']]],
  contracts:['Contratti',[['tenant_id','Inquilino','ref:tenants'],A,['room_id','Camera','ref:rooms'],['start_date','Ingresso','date'],['end_date','Uscita','date'],['monthly_rent','Canone €','number'],['due_day','Giorno scadenza','number'],['notes','Note']]],
  expenses:['Spese',[A,['type_id','Tipologia','ref:expense_types'],['description','Descrizione'],['amount','Importo €','number'],['spent_on','Data','date'],['period_from','Competenza dal','date'],['period_to','Competenza al','date'],['supplier','Fornitore'],['notes','Note']]]};
-const V={dash:['Dashboard',()=>dash()],...Object.fromEntries(Object.keys(S).map(k=>[k,[S[k][0],()=>list(k)]])),dues:['Canoni',()=>dues()],report:['Report',()=>report()]};
+const V={dash:['Dashboard',()=>dash()],...Object.fromEntries(Object.keys(S).map(k=>[k,[S[k][0],()=>list(k)]])),dues:['Canoni',()=>dues()],shares:['Incassi spese',()=>sharesView()],report:['Report',()=>report()]};
 function nav(){$('#nav').innerHTML=Object.entries(V).map(([k,v])=>`<button data-k=${k}>${v[0]}</button>`).join('')+'<button id=bk>Backup</button>'}
 $('#nav').onclick=e=>{const k=e.target.dataset.k;if(e.target.id=='bk')backupUI();if(k){$('#main').onclick=null;document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b==e.target));V[k][1]()}};
 function login(){$('#app').hidden=true;$('#login').hidden=false}
@@ -165,15 +177,17 @@ async function form(t,F,row={},after){const d=$('#dlg');let h='';
  d.querySelector('form').onsubmit=async e=>{if(e.submitter?.value==='x')return;e.preventDefault();
   try{await api(t+(row.id?'/'+row.id:''),{method:row.id?'PUT':'POST',body:{...row,...Object.fromEntries(new FormData(e.target))}});d.close();after()}catch{}}}
 function filt(){$('#q').oninput=e=>document.querySelectorAll('tr[data-f]').forEach(r=>r.hidden=!r.textContent.toLowerCase().includes(e.target.value.toLowerCase()))}
-async function list(t){const[ti,F]=S[t],rows=await api(t),ref={};
+async function list(t){const[ti,F]=S[t],rows=await api(t),ref={},SD=t=='expenses'?await api('shares_due'):[];
+ const inc=r=>{const q=SD.filter(s=>s.expense_id===r.id);if(!q.length)return'Non ripartita';const m=sumk(q,'remaining');return m>0.004?'Da incassare '+eur(m):'Incassata ✓'};
  for(const[,,ty]of F)if(ty?.startsWith('ref:')){const rt=ty.slice(4);ref[rt]=Object.fromEntries((await api(rt)).map(x=>[x.id,R[rt](x)]))}
  const cell=(r,[k,,ty=''])=>ty.startsWith('ref:')?ref[ty.slice(4)][r[k]]??'':r[k]??'';
- $('#main').innerHTML=`<h2>${ti}</h2><button id=new>+ Nuovo</button> <input id=q placeholder="Cerca…"><div class=sc><table class=rt><tr>${F.map(f=>`<th>${f[1]}`).join('')}<th></tr>${rows.map((r,i)=>`<tr data-f data-i=${i}>${F.map(f=>`<td data-l="${esc(f[1])}">${esc(cell(r,f))}`).join('')}<td class=act><button data-a=e>✎</button><button data-a=d>🗑</button>${t=='expenses'?'<button data-a=r>Ripartisci</button><button data-a=f>📎</button>':''}</tr>`).join('')}</table></div>`;
+ $('#main').innerHTML=`<h2>${ti}</h2><button id=new>+ Nuovo</button> <input id=q placeholder="Cerca…"><div class=sc><table class=rt><tr>${F.map(f=>`<th>${f[1]}`).join('')}${t=='expenses'?'<th>Incasso':''}<th></tr>${rows.map((r,i)=>`<tr data-f data-i=${i}>${F.map(f=>`<td data-l="${esc(f[1])}">${esc(cell(r,f))}`).join('')}${t=='expenses'?`<td data-l="Incasso">${esc(inc(r))}`:''}<td class=act><button data-a=e>✎</button><button data-a=d>🗑</button>${t=='expenses'?'<button data-a=r>Ripartisci</button><button data-a=i>Incassi</button><button data-a=f>📎</button>':''}</tr>`).join('')}</table></div>`;
  filt();const again=()=>list(t);$('#new').onclick=()=>form(t,F,{},again);
  $('#main').querySelector('table').onclick=async e=>{const a=e.target.dataset.a,tr=e.target.closest('tr[data-i]');if(!a)return;const r=rows[tr.dataset.i];
   if(a=='e')form(t,F,r,again);
   if(a=='d'&&confirm('Eliminare definitivamente questo elemento?'))try{await api(t+'/'+r.id,{method:'DELETE'});again()}catch{}
   if(a=='r')alloc(r);
+  if(a=='i')collectDlg(r.id,again);
   if(a=='f')attach(r)}}
 async function attach(e){const D=await api(`expenses/${e.id}/docs`),i=document.createElement('input');
  if(D.length&&confirm('Allegati presenti: '+D.map(d=>d.filename).join(', ')+'\nOK per aprire il primo, Annulla per caricarne uno nuovo.'))return openDoc(D[0].id);
@@ -191,6 +205,22 @@ async function shares(e){const a=await api(`expenses/${e.id}/allocation`),sv=$('
   const df=tc-sum0(I.map(cents));$('#tot').innerHTML=df?`<b style="color:#b91c1c">Differenza da assegnare: ${eur(df/100)}</b>`:`<b style="color:#15803d">Totale quote: ${eur(tc/100)} ✓</b>`;sv.disabled=!!df};
  I.forEach(i=>i.oninput=()=>{i.dataset.k=1;if(I.every(x=>x.dataset.k))I.forEach(x=>{if(x!==i)delete x.dataset.k});bal()});bal();sv.hidden=false;
  sv.onclick=async()=>{try{await api(`allocations/${a.id}/shares`,{method:'PUT',body:{shares:I.map(i=>({id:i.dataset.s,final:N(i.value)}))}});await shares(e);const b=$('#sv');b.textContent='Salvato ✓';setTimeout(()=>b.textContent='Salva modifiche manuali',1500)}catch{}}}
+async function collectDlg(id,after){const d=$('#dlg'),L=await api(`expenses/${id}/collect`),e=await get('expenses',id);d.onclick=null;
+ const tot=sumk(L,'final'),pd=sumk(L,'paid'),rem=Math.round((tot-pd)*100)/100;
+ d.innerHTML=`<div class=fb><h3>Incasso spesa</h3><p><b>${esc(e.description||'Spesa')}</b> · ${eur(e.amount)} · ${e.spent_on}</p>${L.length?`<p>Quote ${eur(tot)} · Incassato ${eur(pd)} · <b>Da incassare ${eur(rem)}</b></p>
+  ${L.map(s=>`<div class=card style="margin-bottom:8px;background:#f9fafb"><b style="font-size:16px">${esc(s.tenant)}</b>Quota ${eur(s.final)} · Incassato ${eur(s.paid)} · <strong>Residuo ${eur(s.remaining)}</strong> ${s.remaining<=0.004?'✓':''}
+   ${s.payments.map(p=>`<div><small>${p.paid_on} · ${eur(p.amount)} · ${esc(p.method||'')} <button type=button class=sec data-x=${p.id} style="min-height:32px;padding:2px 8px">🗑</button></small></div>`).join('')}
+   ${s.remaining>0.004?`<button type=button data-s=${s.id} data-r=${s.remaining}>Incassa</button>`:''}</div>`).join('')}`:'<p>Questa spesa non è ancora stata ripartita: usa prima “Ripartisci”.</p>'}</div><div class=ft><button class=sec id=cl>Chiudi</button></div>`;
+ if(!d.open)d.showModal();$('#cl').onclick=()=>{d.close();after?.()};
+ d.onclick=async ev=>{const x=ev.target.dataset.x,s=ev.target.dataset.s;
+  if(x&&confirm('Eliminare questo incasso?'))try{await api('share_payments/'+x,{method:'DELETE'});collectDlg(id,after)}catch{}
+  if(s)form('share_payments',[['paid_on','Data incasso','date'],['amount','Importo €','number'],['method','Modalità','sel:bonifico,contanti,carta,altro'],['notes','Note']],{share_id:s,amount:ev.target.dataset.r,paid_on:today()},()=>collectDlg(id,after))}}
+async function sharesView(){const L=await api('shares_due'),st=s=>s.remaining<=0.004?'Incassata':s.paid>0?'Parziale':'Da incassare';
+ L.sort((a,b)=>(b.remaining>0.004)-(a.remaining>0.004));
+ $('#main').innerHTML=`<h2>Incassi spese</h2><p><b>Da incassare: ${eur(sumk(L,'remaining'))}</b></p><input id=q placeholder="Cerca inquilino o spesa…"><div class=sc><table class=rt><tr><th>Data spesa<th>Appartamento<th>Spesa<th>Inquilino<th>Quota<th>Incassato<th>Residuo<th>Stato<th></tr>
+ ${L.map(s=>`<tr data-f data-e=${s.expense_id}><td data-l="Data spesa">${s.spent_on}<td data-l="Appartamento">${esc(s.apartment)}<td data-l="Spesa">${esc(s.desc)}<td data-l="Inquilino">${esc(s.tenant)}<td data-l="Quota">${eur(s.final)}<td data-l="Incassato">${eur(s.paid)}<td data-l="Residuo">${eur(s.remaining)}<td data-l="Stato">${st(s)}<td class=act><button>${s.remaining>0.004?'Incassa':'Dettaglio'}</button></tr>`).join('')}</table></div>
+ ${L.length?'':'<p>Nessuna spesa ripartita: ripartisci una spesa dal menu Spese.</p>'}`;filt();
+ $('#main').querySelector('table').onclick=e=>{const tr=e.target.closest('tr[data-e]');if(tr&&e.target.tagName=='BUTTON')collectDlg(+tr.dataset.e,sharesView)}}
 async function dues(m=thisM()){const D=await api('dues'+(m?'?month='+m:''));
  $('#main').innerHTML=`<h2>Canoni</h2><input type=month id=mm value="${m}"> <button id=gen>Genera canoni del mese</button> <input id=q placeholder="Cerca inquilino…"><div class=sc><table class=rt><tr><th>Mese<th>Appartamento<th>Inquilino<th>Dovuto<th>Pagato<th>Residuo<th>Stato<th></tr>
  ${D.map(d=>`<tr data-f class="${d.late?'late':''}"><td data-l="Mese">${d.month.slice(0,7)}<td data-l="Appartamento">${esc(d.apartment)}<td data-l="Inquilino">${esc(d.tenant)}<td data-l="Dovuto">${eur(d.amount)}<td data-l="Pagato">${eur(d.paid)}<td data-l="Residuo">${eur(d.remaining)}<td data-l="Stato">${+d.remaining<=0?'Pagato':d.late?'IN RITARDO':+d.paid>0?'Parziale':'Da pagare'}<td class=act>${+d.remaining>0?`<button data-p=${d.id} data-r=${d.remaining}>Incassa</button>`:''}<button class=sec data-h=${d.id}>Pagamenti</button></tr>`).join('')}</table></div>
@@ -207,11 +237,18 @@ async function payDlg(id,m){const L=(await api('payments')).filter(p=>p.due_id==
 async function dash(m=thisM()){const[D,V2]=await Promise.all([api('dashboard?month='+m),api('dues')]),sum=k=>D.per.reduce((a,x)=>a+ +x[k],0),late=V2.filter(d=>d.late);
  $('#main').innerHTML=`<h2>Dashboard</h2><input type=month id=dm value="${m}"><div class=cards style="margin-top:10px">
  <div class=card>Appartamenti<b>${D.k.apartments}</b></div><div class=card>Inquilini attivi<b>${D.k.tenants}</b></div><div class=card>Affitti previsti<b>${eur(sum('expected'))}</b></div>
- <div class=card>Incassati<b>${eur(sum('collected'))}</b></div><div class=card>Da incassare<b>${eur(sum('expected')-sum('collected'))}</b></div><div class=card>Spese del mese<b>${eur(sum('expenses'))}</b></div></div>
- ${D.k.tenants&&!sum('expected')?'<p class=card>Nessun canone generato per questo mese: vai in <b>Canoni</b> e premi “Genera canoni del mese”.</p>':''}<h3>Per appartamento</h3>${D.per.map(p=>`<div class=card style="margin-bottom:8px"><b style="font-size:15px">${esc(p.name)}</b>Previsti ${eur(p.expected)} · Incassati ${eur(p.collected)} · Spese ${eur(p.expenses)} · Saldo ${eur(p.collected-p.expenses)}
+ <div class=card>Incassati<b>${eur(sum('collected'))}</b></div><div class=card>Da incassare<b>${eur(sum('expected')-sum('collected'))}</b></div><div class=card>Spese del mese<b>${eur(sum('expenses'))}</b></div><div class=card>Spese da incassare (mese)<b>${eur(D.expMonthDue)}</b></div></div>
+ <div class=card style="margin-top:10px;border-left:6px solid ${D.asOf.total>0?'#b91c1c':'#16a34a'}"><h3 style="margin:0 0 6px">Totale da incassare ad oggi (${today().split('-').reverse().join('/')})</h3>
+ <div style="display:flex;justify-content:space-between;gap:12px"><span>Ritardi mesi precedenti (${D.asOf.arrearsN} canoni)</span><b style="font-size:16px">${eur(D.asOf.arrears)}</b></div>
+ <div style="display:flex;justify-content:space-between;gap:12px"><span>Canoni del mese in corso</span><b style="font-size:16px">${eur(D.asOf.current)}</b></div>
+ <div style="display:flex;justify-content:space-between;gap:12px"><span>Spese da incassare (tutte)</span><b style="font-size:16px">${eur(D.asOf.expDue)}</b></div>
+ <div style="display:flex;justify-content:space-between;gap:12px;border-top:1px solid #e5e7eb;margin-top:6px;padding-top:6px"><span><b>Totale ad oggi</b></span><b>${eur(D.asOf.total)}</b></div></div>
+ ${D.unallocated?`<p class=card style="margin-top:10px">Ci sono <b>${D.unallocated}</b> spese non ancora ripartite: non compaiono tra le spese da incassare finché non le ripartisci.</p>`:''}
+ ${D.k.tenants&&!sum('expected')?'<p class=card>Nessun canone generato per questo mese: vai in <b>Canoni</b> e premi “Genera canoni del mese”.</p>':''}<h3>Per appartamento</h3>${D.per.map(p=>`<div class=card style="margin-bottom:8px"><b style="font-size:15px">${esc(p.name)}</b>Previsti ${eur(p.expected)} · Incassati ${eur(p.collected)} · Spese ${eur(p.expenses)} · Spese da incassare ${eur(p.expToCollect)} · Saldo ${eur(p.collected-p.expenses)}
  <div class=bar><div style="width:${p.expected>0?Math.min(100,p.collected/p.expected*100):0}%"></div></div></div>`).join('')}
- <h3>Pagamenti in ritardo (${late.length})</h3><div class=sc><table>${late.map(d=>`<tr class=late><td>${d.month.slice(0,7)}<td>${esc(d.apartment)}<td>${esc(d.tenant)}<td>${eur(d.remaining)}</tr>`).join('')}</table></div>`;
- $('#dm').onchange=e=>dash(e.target.value)}
+ <h3>Pagamenti in ritardo (${late.length})</h3><div class=sc><table>${late.map(d=>`<tr class=late><td>${d.month.slice(0,7)}<td>${esc(d.apartment)}<td>${esc(d.tenant)}<td>${eur(d.remaining)}</tr>`).join('')}</table></div>
+ <h3>Spese da incassare (${D.shareList.length})</h3><div class=sc><table>${D.shareList.map(s=>`<tr><td>${s.spent_on}<td>${esc(s.apartment)}<td>${esc(s.desc)}<td>${esc(s.tenant)}<td>${eur(s.remaining)}<td><button data-e=${s.expense_id}>Incassa</button></tr>`).join('')||'<tr><td>Nessuna spesa da incassare</tr>'}</table></div>`;
+ $('#dm').onchange=e=>dash(e.target.value);$('#main').onclick=e=>{const x=e.target.dataset.e;if(x)collectDlg(+x,()=>dash(m))}}
 async function report(){const[Ap,Te]=await Promise.all([api('apartments'),api('tenants')]),y=new Date().toISOString().slice(0,10);
  $('#main').innerHTML=`<h2>Report e PDF</h2><label>Appartamento<select id=ra>${Ap.map(a=>`<option value=${a.id}>${esc(a.name)}</option>`).join('')}</select></label>
  <label>Inquilino (facoltativo)<select id=rt><option value="">Tutti</option>${Te.map(t=>`<option value=${t.id}>${esc(R.tenants(t))}</option>`).join('')}</select></label>
