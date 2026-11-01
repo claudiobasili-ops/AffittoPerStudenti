@@ -1,20 +1,39 @@
 <!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="icon.svg"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="theme-color" content="#1d4ed8"><title>Affitti Studenti</title>
 <style>
-*{box-sizing:border-box}body{margin:0;font:15px system-ui,sans-serif;color:#1f2937;background:#f3f4f6}
-#app{display:flex;min-height:100vh}nav{background:#1e3a8a;display:flex;flex-direction:column;width:200px;padding:12px 8px;gap:4px}
-nav button{background:none;border:0;color:#dbeafe;text-align:left;padding:10px;border-radius:8px;font-size:15px}nav button.on{background:#1d4ed8;color:#fff}
-main{flex:1;padding:16px;min-width:0}h2{margin-top:0}.sc{overflow-x:auto}table{border-collapse:collapse;width:100%;background:#fff;margin-top:10px}
-td,th{padding:8px;border-bottom:1px solid #e5e7eb;text-align:left;white-space:nowrap}tr.late{background:#fee2e2}
-button,select,input{font:inherit;padding:8px;border-radius:8px;border:1px solid #cbd5e1}button{background:#1d4ed8;color:#fff;border:0;cursor:pointer;margin:2px}
-dialog{border:0;border-radius:14px;width:min(520px,94vw);max-height:90vh;overflow:auto}label{display:block;margin:8px 0}label input,label select{width:100%}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%}body{margin:0;font:16px/1.4 system-ui,-apple-system,sans-serif;color:#1f2937;background:#f3f4f6;overflow-x:hidden}
+#app{display:flex;min-height:100vh;min-height:100dvh}
+nav{background:#1e3a8a;display:flex;flex-direction:column;width:200px;padding:12px 8px;gap:4px;position:sticky;top:0;height:100vh;height:100dvh;overflow-y:auto}
+nav button{background:none;border:0;color:#dbeafe;text-align:left;padding:10px;border-radius:8px;margin:0}nav button.on{background:#1d4ed8;color:#fff}
+main{flex:1;padding:16px;min-width:0;max-width:1200px}h2{margin-top:0}.sc{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{border-collapse:collapse;width:100%;background:#fff;margin-top:10px}td,th{padding:8px;border-bottom:1px solid #e5e7eb;text-align:left;white-space:nowrap}tr.late{background:#fee2e2}
+button,select,input{font:inherit;font-size:16px;padding:10px;border-radius:10px;border:1px solid #cbd5e1;max-width:100%;min-height:44px}
+input[type=date],input[type=month]{-webkit-appearance:none;appearance:none;background:#fff;min-width:0}
+button{background:#1d4ed8;color:#fff;border:0;cursor:pointer;margin:2px}button.sec{background:#e5e7eb;color:#111}button:disabled{opacity:.4}
+dialog{border:0;border-radius:16px;width:min(640px,96vw);max-height:92vh;max-height:92dvh;padding:0;overflow:auto}
+dialog>:not(form):not(.fb):not(.ft){margin-left:16px;margin-right:16px}dialog>:first-child{margin-top:16px}dialog>:last-child{margin-bottom:16px}
+.fb{padding:16px}.fb h3{margin:0 0 8px}.g{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));column-gap:12px}
+.ft{position:sticky;bottom:0;z-index:2;display:flex;gap:8px;flex-wrap:wrap;background:#fff;padding:10px 16px calc(10px + env(safe-area-inset-bottom));border-top:1px solid #e5e7eb}.ft button{flex:1;margin:0}
+label{display:block;margin:6px 0}label input,label select{width:100%}
 .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}.card{background:#fff;padding:12px;border-radius:12px}.card b{display:block;font-size:20px}
 .bar div{height:10px;background:#16a34a;border-radius:5px}.bar{background:#e5e7eb;border-radius:5px;margin:4px 0 10px}
-#login{max-width:340px;margin:12vh auto;background:#fff;padding:20px;border-radius:14px}#login input{width:100%;margin:6px 0}
-@media(max-width:800px){#app{flex-direction:column-reverse}nav{width:auto;flex-direction:row;overflow-x:auto;padding:8px calc(8px + env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) 8px}nav button{white-space:nowrap}}
-@media print{body>*:not(dialog){display:none!important}dialog{position:static;width:100%;max-height:none}.np{display:none}}</style></head><body>
+#login{max-width:340px;margin:12vh auto;background:#fff;padding:20px;border-radius:14px}#login input{width:100%;margin:6px 0}#pa{display:none}
+@media(max-width:900px){
+ #app{display:block}
+ nav{position:fixed;left:0;right:0;bottom:0;top:auto;z-index:20;width:auto;height:auto;flex-direction:row;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;gap:2px;padding:6px 8px calc(6px + env(safe-area-inset-bottom))}
+ nav button{flex:0 0 auto;white-space:nowrap;padding:10px 14px}
+ main{padding:12px calc(12px + env(safe-area-inset-right)) calc(92px + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left))}
+ h2{font-size:22px}#q,#mm,#dm,#ra,#rt,#rf,#rto{width:100%;margin:6px 0}dialog{width:calc(100vw - 16px)}.cards{grid-template-columns:repeat(2,1fr)}.card b{font-size:18px}
+ .sc{overflow:visible}table.rt,table.rt tbody{display:block;background:none}table.rt tbody{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px}table.rt tr:has(th){display:none}
+ table.rt tr{display:block;background:#fff;border-radius:12px;padding:8px 12px;box-shadow:0 1px 2px #0002}table.rt tr.late{background:#fee2e2}
+ table.rt td{display:flex;justify-content:space-between;gap:12px;border:0;padding:5px 0;white-space:normal;text-align:right;overflow-wrap:anywhere}
+ table.rt td::before{content:attr(data-l);font-weight:600;color:#6b7280;text-align:left;flex:0 0 40%}
+ table.rt td.act{justify-content:flex-start;flex-wrap:wrap}table.rt td.act::before{content:none}}
+@media print{body>*:not(#pa){display:none!important}#pa{display:block}}
+</style></head><body>
 <div id="login" hidden><h2>Accedi</h2><input id="em" type="email" placeholder="Email"><input id="pw" type="password" placeholder="Password"><button id="lg">Entra</button></div>
-<div id="app" hidden><nav id="nav"></nav><main id="main"></main></div><dialog id="dlg"></dialog>
+<div id="app" hidden><nav id="nav"></nav><main id="main"></main></div><dialog id="dlg"></dialog><div id="pa"></div>
 <script>
 const $=s=>document.querySelector(s),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),
 eur=v=>Number(v).toLocaleString('it-IT',{style:'currency',currency:'EUR'}),thisM=()=>new Date().toISOString().slice(0,7);
@@ -32,10 +51,12 @@ let DB;const P=r=>new Promise((ok,ko)=>{r.onsuccess=()=>ok(r.result);r.onerror=(
  all=t=>P(DB.transaction(t).objectStore(t).getAll()),get=(t,id)=>P(DB.transaction(t).objectStore(t).get(id)),
  put=async(t,o)=>({...o,id:await P(DB.transaction(t,'readwrite').objectStore(t).put(o))}),
  sum0=a=>a.reduce((s,x)=>s+x,0),sumk=(a,k)=>a.reduce((s,x)=>s+x[k],0),today=()=>new Date().toISOString().slice(0,10);
-async function rm(t,id){for(const[c,k]of FK[t]||[])if((await all(c)).some(x=>x[k]===id))throw'Impossibile eliminare: ci sono dati collegati (storico da conservare)';
+async function rm(t,id){if(t=='contracts'){const ds=(await all('rent_dues')).filter(d=>d.contract_id===id).map(d=>d.id);if((await all('payments')).some(p=>ds.includes(p.due_id)))throw'Il contratto ha pagamenti registrati: per conservare lo storico imposta la data di uscita invece di eliminarlo'}for(const[c,k]of FK[t]||[])if((await all(c)).some(x=>x[k]===id))throw'Impossibile eliminare: ci sono dati collegati (storico da conservare)';
  for(const[c,k]of CAS[t]||[])for(const x of await all(c))if(x[k]===id)await rm(c,x.id);await P(DB.transaction(t,'readwrite').objectStore(t).delete(id))}
-function norm(t,b){const o={};for(const k of COLS[t].split(',')){let v=b[k];if(v===''||v===undefined)v=null;else if(k.endsWith('_id')||NUM.includes(k))v=Number(v);o[k]=v}if(b.id)o.id=Number(b.id);return o}
-async function check(t,o){for(const k of REQ[t]||[])if(o[k]==null||Number.isNaN(o[k]))throw'Compila il campo obbligatorio: '+k;
+function norm(t,b){const o={};for(const k of COLS[t].split(',')){let v=b[k];if(v===''||v===undefined)v=null;else if(k.endsWith('_id')||NUM.includes(k))v=Number(String(v).replace(',','.'));o[k]=v}if(b.id)o.id=Number(b.id);return o}
+async function check(t,o){if(t=='payments'){const du=(await duesRows()).find(d=>d.id===o.due_id);if(du&&o.amount>du.remaining+.005)throw"L'importo supera il residuo ("+du.remaining.toFixed(2)+" €)"}
+ if(t=='contracts'&&o.due_day&&(o.due_day<1||o.due_day>28))throw'Il giorno di scadenza deve essere tra 1 e 28';
+ if(t=='tenants'&&o.tax_code){o.tax_code=o.tax_code.toUpperCase().trim();if(!/^[A-Z0-9]{16}$/.test(o.tax_code))throw'Codice fiscale non valido (16 caratteri)'}for(const k of REQ[t]||[])if(o[k]==null||Number.isNaN(o[k]))throw'Compila il campo obbligatorio: '+k;
  if((t=='payments'||t=='expenses')&&o.amount<=0)throw'L\'importo deve essere maggiore di zero';
  if(t=='contracts'){if(o.end_date&&o.end_date<o.start_date)throw'La data di uscita precede quella di ingresso';
   if(o.room_id)for(const c of await all('contracts'))if(c.id!==o.id&&c.room_id===o.room_id&&o.start_date<=(c.end_date||'9999')&&c.start_date<=(o.end_date||'9999'))throw'La camera è già assegnata in quel periodo'}
@@ -53,7 +74,11 @@ async function duesRows(month){const[D,C,Te,Ap,Pa]=await Promise.all(['rent_dues
  .sort((a,b)=>b.month.localeCompare(a.month)||a.apartment.localeCompare(b.apartment))}
 async function route(p,o){const m=o.method||'GET',b=o.body,[path,qs]=p.split('?'),a=path.split('/'),Q=new URLSearchParams(qs||'');
  if(COLS[a[0]]&&a.length<3){const t=a[0];if(m=='GET')return(await all(t)).sort((x,y)=>y.id-x.id);
-  if(m=='DELETE'){await rm(t,+a[1]);return{ok:1}}const x=norm(t,b);if(a[1])x.id=+a[1];await check(t,x);return put(t,x)}
+  if(m=='DELETE'){await rm(t,+a[1]);return{ok:1}}const x=norm(t,b);if(a[1])x.id=+a[1];await check(t,x);
+  if(t=='expenses'&&x.id){const old=await get('expenses',x.id),al=(await all('allocations')).find(q=>q.expense_id===x.id);
+   if(old&&al&&(old.amount!==x.amount||old.apartment_id!==x.apartment_id||old.period_from!==x.period_from||old.period_to!==x.period_to)){await rm('allocations',al.id);setTimeout(()=>alert('Spesa modificata: la ripartizione precedente è stata annullata. Rifalla con "Ripartisci".'),300)}}
+  return put(t,x)}
+ if(a[0]=='rent_dues'&&m=='DELETE'){await rm('rent_dues',+a[1]);return{ok:1}}
  if(path=='dues')return duesRows(Q.get('month'));
  if(path=='dues/generate'){const mo=b.month+'-01',last=new Date(Date.UTC(+b.month.slice(0,4),+b.month.slice(5),0)).toISOString().slice(0,10),D=await all('rent_dues');let n=0;
   for(const c of await all('contracts'))if(c.start_date<=last&&(!c.end_date||c.end_date>=mo)&&!D.some(d=>d.contract_id===c.id&&d.month===mo)){await put('rent_dues',{contract_id:c.id,month:mo,amount:c.monthly_rent});n++}return{created:n}}
@@ -80,6 +105,8 @@ async function route(p,o){const m=o.method||'GET',b=o.body,[path,qs]=p.split('?'
   for(const x of L){const s=await get('allocation_shares',+x.id);s.final_cents=Math.round(x.final*100);s.modified=s.final_cents!==s.calc_cents;await put('allocation_shares',s)}return{ok:1}}
  throw'Operazione non supportata'}
 async function api(p,o={}){try{return await route(p,o)}catch(e){alert(typeof e==='string'?e:'Errore: '+(e?.message||e));throw 0}}
+function doPrint(){$('#pa').innerHTML=$('#pr').innerHTML;print()}
+const N=v=>Number(String(v??'').replace(',','.'))||0;
 async function initDB(){DB=await new Promise((ok,ko)=>{const r=indexedDB.open('affitti',1);r.onupgradeneeded=()=>TABLES.forEach(t=>r.result.createObjectStore(t,{keyPath:'id',autoIncrement:true}));r.onsuccess=()=>ok(r.result);r.onerror=()=>ko(r.error)});
  if(!(await all('expense_types')).length)for(const n of['Elettricità','Gas','Acqua','Riscaldamento','Internet','Spese condominiali','Manutenzione','Tassa rifiuti','Altro'])await put('expense_types',{name:n});
  navigator.storage?.persist?.();
@@ -91,7 +118,7 @@ function fileDlg(name,blob,title){const d=$('#dlg'),u=URL.createObjectURL(blob);
 async function openDoc(id){const d=await get('documents',id);fileDlg(d.filename,d.blob,'Allegato')}
 const b64=b=>new Promise(r=>{const f=new FileReader();f.onload=()=>r(f.result);f.readAsDataURL(b)});
 async function exportAll(){const o={};for(const t of TABLES)o[t]=await all(t);o.documents=await Promise.all(o.documents.map(async d=>({...d,blob:await b64(d.blob)})));return new Blob([JSON.stringify(o)],{type:'application/json'})}
-async function importAll(txt){const o=JSON.parse(txt);if(!o.apartments||!o.contracts)throw 0;
+async function importAll(txt){const o=JSON.parse(txt);if(!o.apartments||!o.contracts||!TABLES.every(t=>Array.isArray(o[t]||[])))throw 0;
  for(const t of TABLES){await P(DB.transaction(t,'readwrite').objectStore(t).clear());for(const r of o[t]||[]){if(t=='documents')r.blob=await(await fetch(r.blob)).blob();await put(t,r)}}}
 function backupUI(){const d=$('#dlg');d.innerHTML=`<h3>Backup dei dati</h3><p>I dati sono salvati solo su questo dispositivo. Esporta un backup e conservalo in File/iCloud.</p><button id=ex>Esporta backup</button><label>Ripristina da file<input type=file id=im accept=".json"></label><button onclick="$('#dlg').close()">Chiudi</button>`;d.showModal();
  $('#ex').onclick=async()=>{const bl=await exportAll();try{localStorage.lastBackup=Date.now()}catch{}fileDlg('backup-affitti-'+today()+'.json',bl,'Backup pronto')};
@@ -106,10 +133,10 @@ async function localReport(kind,p){try{if(!p.apartment)throw'Seleziona un appart
   for(const e of ex){const l=sh.filter(x=>x.expense_id===e.id);if(!l.length)rows.push([e.spent_on,e.type,e.description,e.amount,'','','']);else l.forEach(x=>rows.push([e.spent_on,e.type,e.description,e.amount,x.criterion,x.tenant,(x.final_cents/100).toFixed(2)]))}
   return fileDlg('report.csv',new Blob(['\ufeff'+rows.map(r=>r.map(v=>`"${String(v??'').replace(/"/g,'""')}"`).join(';')).join('\n')],{type:'text/csv'}),'Report CSV')}
  const by={};sh.forEach(x=>by[x.tenant]=(by[x.tenant]||0)+x.final_cents);const tot=sum0(ex.map(e=>Math.round(e.amount*100)));
- $('#dlg').innerHTML=`<div id=pr><h2>Ripartizione spese</h2><p><b>${esc(ap.name)}</b> — ${esc(ap.address)}, ${esc(ap.city)}<br>Periodo: ${p.from} / ${p.to}</p><h3>Spese sostenute</h3>
+ $('#dlg').innerHTML=`<div class=fb><div id=pr><h2>Ripartizione spese</h2><p><b>${esc(ap.name)}</b> — ${esc(ap.address)}, ${esc(ap.city)}<br>Periodo: ${p.from} / ${p.to}</p><h3>Spese sostenute</h3>
   <table>${ex.map(e=>`<tr><td>${e.spent_on}<td>${esc(e.type)}<td>${esc(e.description)}<td>${eur(e.amount)}<td>${e.period_from} / ${e.period_to}</tr>`).join('')}</table><p><b>Totale spese: ${eur(tot/100)}</b></p>
   <h3>Quote per inquilino</h3><p>Criterio: ${esc([...new Set(sh.map(x=>x.criterion))].join(', ')||'nessuna ripartizione registrata')}</p><table>${Object.entries(by).map(([n,v])=>`<tr><td>${esc(n)}<td>${eur(v/100)}</tr>`).join('')}</table>
-  ${sh.some(x=>x.modified)?'<p><i>Alcune quote sono state modificate manualmente.</i></p>':''}</div><button class=np onclick="print()">Stampa / Salva PDF</button> <button class=np onclick="$('#dlg').close()">Chiudi</button>`;$('#dlg').showModal()}
+  ${ex.some(e=>!als.find(x=>x.expense_id===e.id))?'<p><i>Attenzione: alcune spese non sono ancora ripartite.</i></p>':''}${sh.some(x=>x.modified)?'<p><i>Alcune quote sono state modificate manualmente.</i></p>':''}</div></div><div class=ft><button onclick="doPrint()">Stampa / Salva PDF</button><button class=sec onclick="$('#dlg').close()">Chiudi</button></div>`;$('#dlg').showModal()}
  catch(e){alert(typeof e==='string'?e:'Errore: '+(e?.message||e))}}
 
 const R={apartments:r=>r.name,tenants:r=>r.first_name+' '+r.last_name,expense_types:r=>r.name,rooms:r=>r.name};
@@ -121,25 +148,27 @@ const S={apartments:['Appartamenti',[['name','Nome'],['address','Indirizzo'],['c
  expenses:['Spese',[A,['type_id','Tipologia','ref:expense_types'],['description','Descrizione'],['amount','Importo €','number'],['spent_on','Data','date'],['period_from','Competenza dal','date'],['period_to','Competenza al','date'],['supplier','Fornitore'],['notes','Note']]]};
 const V={dash:['Dashboard',()=>dash()],...Object.fromEntries(Object.keys(S).map(k=>[k,[S[k][0],()=>list(k)]])),dues:['Canoni',()=>dues()],report:['Report',()=>report()]};
 function nav(){$('#nav').innerHTML=Object.entries(V).map(([k,v])=>`<button data-k=${k}>${v[0]}</button>`).join('')+'<button id=bk>Backup</button>'}
-$('#nav').onclick=e=>{const k=e.target.dataset.k;if(e.target.id=='bk')backupUI();if(k){document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b==e.target));V[k][1]()}};
+$('#nav').onclick=e=>{const k=e.target.dataset.k;if(e.target.id=='bk')backupUI();if(k){$('#main').onclick=null;document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b==e.target));V[k][1]()}};
 function login(){$('#app').hidden=true;$('#login').hidden=false}
 $('#lg').onclick=async()=>{try{await api('login',{method:'POST',body:{email:$('#em').value,password:$('#pw').value}});$('#login').hidden=true;$('#app').hidden=false;nav();dash()}catch{}};
-initDB().then(()=>{$('#app').hidden=false;nav();dash()}).catch(e=>alert('Archivio dati non disponibile in questo browser: '+e));
+initDB().then(()=>{$('#app').hidden=false;nav();document.querySelector('nav button').classList.add('on');dash()}).catch(e=>alert('Archivio dati non disponibile in questo browser: '+e));
 if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js');
-async function form(t,F,row={},after){const d=$('#dlg');let h=`<form method=dialog><h3>${row.id?'Modifica':'Nuovo'}</h3>`;
+async function form(t,F,row={},after){const d=$('#dlg');let h='';
  for(const[k,l,ty='text']of F){let i;
   if(ty.startsWith('ref:')){const rt=ty.slice(4);i=`<select name=${k}><option value="">—</option>${(await api(rt)).map(x=>`<option value=${x.id} ${x.id==row[k]?'selected':''}>${esc(R[rt](x))}</option>`).join('')}</select>`}
   else if(ty.startsWith('sel:'))i=`<select name=${k}>${ty.slice(4).split(',').map(o=>`<option ${o==row[k]?'selected':''}>${o}</option>`).join('')}</select>`;
-  else i=`<input name=${k} type=${ty} ${ty=='number'?'step=0.01':''} value="${esc(row[k])}">`;h+=`<label>${l}${i}</label>`}
- d.innerHTML=h+'<div><button value=ok>Salva</button><button value=x formnovalidate>Annulla</button></div></form>';d.showModal();
- d.querySelector('form').onsubmit=async e=>{if(e.submitter.value!=='ok')return;e.preventDefault();
+  else if(ty=='number')i=`<input name=${k} type=text inputmode=decimal autocomplete=off value="${esc(row[k])}">`;
+  else i=`<input name=${k} type=${ty} value="${esc(row[k])}">`;h+=`<label>${l}${i}</label>`}
+ d.onclick=null;d.innerHTML=`<form method=dialog><div class=fb><h3>${row.id?'Modifica':'Nuovo'}</h3><div class=g>${h}</div></div><div class=ft><button value=ok>Salva</button><button value=x class=sec formnovalidate>Annulla</button></div></form>`;d.showModal();
+ const A=d.querySelector('[name=apartment_id]'),Rm=d.querySelector('[name=room_id]');
+ if(A&&Rm){const RS=await api('rooms'),fill=sel=>{Rm.innerHTML='<option value="">—</option>'+RS.filter(r=>r.apartment_id==A.value).map(r=>`<option value=${r.id} ${r.id==sel?'selected':''}>${esc(r.name)}</option>`).join('')};fill(row.room_id);A.onchange=()=>fill()}
+ d.querySelector('form').onsubmit=async e=>{if(e.submitter?.value==='x')return;e.preventDefault();
   try{await api(t+(row.id?'/'+row.id:''),{method:row.id?'PUT':'POST',body:{...row,...Object.fromEntries(new FormData(e.target))}});d.close();after()}catch{}}}
 function filt(){$('#q').oninput=e=>document.querySelectorAll('tr[data-f]').forEach(r=>r.hidden=!r.textContent.toLowerCase().includes(e.target.value.toLowerCase()))}
 async function list(t){const[ti,F]=S[t],rows=await api(t),ref={};
  for(const[,,ty]of F)if(ty?.startsWith('ref:')){const rt=ty.slice(4);ref[rt]=Object.fromEntries((await api(rt)).map(x=>[x.id,R[rt](x)]))}
  const cell=(r,[k,,ty=''])=>ty.startsWith('ref:')?ref[ty.slice(4)][r[k]]??'':r[k]??'';
- $('#main').innerHTML=`<h2>${ti}</h2><button id=new>+ Nuovo</button> <input id=q placeholder="Cerca…"><div class=sc><table><tr>${F.map(f=>`<th>${f[1]}`).join('')}<th></tr>${rows.map((r,i)=>`<tr data-f data-i=${i}>${F.map(f=>`<td>${esc(cell(r,f))}`).join('')}<td>
-  <button data-a=e>✎</button><button data-a=d>🗑</button>${t=='expenses'?'<button data-a=r>Ripartisci</button><button data-a=f>📎</button>':''}</tr>`).join('')}</table></div>`;
+ $('#main').innerHTML=`<h2>${ti}</h2><button id=new>+ Nuovo</button> <input id=q placeholder="Cerca…"><div class=sc><table class=rt><tr>${F.map(f=>`<th>${f[1]}`).join('')}<th></tr>${rows.map((r,i)=>`<tr data-f data-i=${i}>${F.map(f=>`<td data-l="${esc(f[1])}">${esc(cell(r,f))}`).join('')}<td class=act><button data-a=e>✎</button><button data-a=d>🗑</button>${t=='expenses'?'<button data-a=r>Ripartisci</button><button data-a=f>📎</button>':''}</tr>`).join('')}</table></div>`;
  filt();const again=()=>list(t);$('#new').onclick=()=>form(t,F,{},again);
  $('#main').querySelector('table').onclick=async e=>{const a=e.target.dataset.a,tr=e.target.closest('tr[data-i]');if(!a)return;const r=rows[tr.dataset.i];
   if(a=='e')form(t,F,r,again);
@@ -149,28 +178,37 @@ async function list(t){const[ti,F]=S[t],rows=await api(t),ref={};
 async function attach(e){const D=await api(`expenses/${e.id}/docs`),i=document.createElement('input');
  if(D.length&&confirm('Allegati presenti: '+D.map(d=>d.filename).join(', ')+'\nOK per aprire il primo, Annulla per caricarne uno nuovo.'))return openDoc(D[0].id);
  i.type='file';i.accept='application/pdf,image/*';i.onchange=async()=>{const f=new FormData();f.append('f',i.files[0]);try{await api(`expenses/${e.id}/doc`,{method:'POST',body:f});alert('Allegato caricato')}catch{}};i.click()}
-async function alloc(e){const d=$('#dlg'),T=await api(`expenses/${e.id}/tenants`);
- d.innerHTML=`<form method=dialog onsubmit="return false"><h3>Ripartizione ${eur(e.amount)}</h3><label>Criterio<select id=cr><option value=uguale>Parti uguali<option value=giorni>Giorni di permanenza<option value=percentuale>Percentuali (%)<option value=quota>Quote (€)</select></label><div id=vals></div>
-  <div><button type=button id=go>Calcola</button><button value=x>Chiudi</button></div><div id=res></div></form>`;d.showModal();
- const cr=$('#cr');cr.onchange=()=>$('#vals').innerHTML=['percentuale','quota'].includes(cr.value)?T.map(t=>`<label>${esc(t.name)} (${t.days} gg)<input type=number step=0.01 data-t=${t.id}></label>`).join(''):'';
- $('#go').onclick=async()=>{const values={};document.querySelectorAll('#vals input').forEach(i=>values[i.dataset.t]=i.value);
-  try{await api(`expenses/${e.id}/allocate`,{method:'POST',body:{criterion:cr.value,values}});shares(e)}catch{}};shares(e)}
-async function shares(e){const a=await api(`expenses/${e.id}/allocation`);if(!a)return;
- $('#res').innerHTML=`<h4>Criterio: ${a.criterion} — totale ${eur(a.total_cents/100)}</h4><table>${a.shares.map(s=>`<tr><td>${esc(s.tenant)}<td>${s.days??''} gg<td><input type=number step=0.01 data-s=${s.id} value=${(s.final_cents/100).toFixed(2)}><td>${s.modified?'✏️ calcolato '+(s.calc_cents/100).toFixed(2):''}</tr>`).join('')}</table>
-  <button type=button id=sv>Salva modifiche manuali</button>`;
- $('#sv').onclick=async()=>{try{await api(`allocations/${a.id}/shares`,{method:'PUT',body:{shares:[...document.querySelectorAll('#res input')].map(i=>({id:i.dataset.s,final:+i.value}))}});shares(e)}catch{}}}
+async function alloc(e){const d=$('#dlg'),T=await api(`expenses/${e.id}/tenants`);d.onclick=null;
+ d.innerHTML=`<form method=dialog onsubmit="if(!event.submitter||event.submitter.value!='x')return false"><div class=fb><h3>Ripartizione ${eur(e.amount)}</h3><label>Criterio<select id=cr><option value=uguale>Parti uguali<option value=giorni>Giorni di permanenza<option value=percentuale>Percentuali (%)<option value=quota>Quote (€)</select></label><div id=vals class=g></div><div id=res></div></div>
+  <div class=ft><button type=button id=go>Calcola</button><button type=button id=sv hidden>Salva modifiche manuali</button><button value=x class=sec>Chiudi</button></div></form>`;d.showModal();
+ const cr=$('#cr');cr.onchange=()=>$('#vals').innerHTML=['percentuale','quota'].includes(cr.value)?T.map(t=>`<label>${esc(t.name)} (${t.days} gg)<input type=text inputmode=decimal data-t=${t.id}></label>`).join(''):'';
+ $('#go').onclick=async()=>{const values={};document.querySelectorAll('#vals input').forEach(i=>values[i.dataset.t]=N(i.value));try{await api(`expenses/${e.id}/allocate`,{method:'POST',body:{criterion:cr.value,values}});shares(e)}catch{}};shares(e)}
+async function shares(e){const a=await api(`expenses/${e.id}/allocation`),sv=$('#sv');if(!a){sv.hidden=true;return}
+ $('#res').innerHTML=`<h4>Criterio: ${esc(a.criterion)}</h4><p><small>Modifica una quota: le altre si adeguano da sole per mantenere il totale.</small></p><div class=g>${a.shares.map(s=>`<label>${esc(s.tenant)} <small>${s.days??''} gg${s.modified?' · ✏️ calcolata '+(s.calc_cents/100).toFixed(2):''}</small><input type=text inputmode=decimal data-s=${s.id} data-w=${s.weight||0} value="${(s.final_cents/100).toFixed(2)}"></label>`).join('')}</div><p id=tot></p>`;
+ const I=[...document.querySelectorAll('#res input')],tc=a.total_cents,cents=i=>Math.round(N(i.value)*100);
+ const bal=()=>{const lk=I.filter(i=>i.dataset.k),fr=I.filter(i=>!i.dataset.k),rem=tc-sum0(lk.map(cents));
+  if(fr.length&&rem>=0){const w=fr.map(i=>+i.dataset.w||0);split(rem,sum0(w)?w:fr.map(()=>1)).forEach((c,j)=>fr[j].value=(c/100).toFixed(2))}
+  const df=tc-sum0(I.map(cents));$('#tot').innerHTML=df?`<b style="color:#b91c1c">Differenza da assegnare: ${eur(df/100)}</b>`:`<b style="color:#15803d">Totale quote: ${eur(tc/100)} ✓</b>`;sv.disabled=!!df};
+ I.forEach(i=>i.oninput=()=>{i.dataset.k=1;if(I.every(x=>x.dataset.k))I.forEach(x=>{if(x!==i)delete x.dataset.k});bal()});bal();sv.hidden=false;
+ sv.onclick=async()=>{try{await api(`allocations/${a.id}/shares`,{method:'PUT',body:{shares:I.map(i=>({id:i.dataset.s,final:N(i.value)}))}});await shares(e);const b=$('#sv');b.textContent='Salvato ✓';setTimeout(()=>b.textContent='Salva modifiche manuali',1500)}catch{}}}
 async function dues(m=thisM()){const D=await api('dues'+(m?'?month='+m:''));
- $('#main').innerHTML=`<h2>Canoni</h2><input type=month id=mm value="${m}"> <button id=gen>Genera canoni del mese</button> <input id=q placeholder="Cerca inquilino…"><div class=sc><table><tr><th>Mese<th>Appartamento<th>Inquilino<th>Dovuto<th>Pagato<th>Residuo<th>Stato<th></tr>
- ${D.map(d=>`<tr data-f class="${d.late?'late':''}"><td>${d.month.slice(0,7)}<td>${esc(d.apartment)}<td>${esc(d.tenant)}<td>${eur(d.amount)}<td>${eur(d.paid)}<td>${eur(d.remaining)}<td>${+d.remaining<=0?'Pagato':d.late?'IN RITARDO':+d.paid>0?'Parziale':'Da pagare'}<td>${+d.remaining>0?`<button data-p=${d.id} data-r=${d.remaining}>Incassa</button>`:''}</tr>`).join('')}</table></div>
- <p>Lascia vuoto il mese per vedere tutto lo storico.</p>`;filt();
+ $('#main').innerHTML=`<h2>Canoni</h2><input type=month id=mm value="${m}"> <button id=gen>Genera canoni del mese</button> <input id=q placeholder="Cerca inquilino…"><div class=sc><table class=rt><tr><th>Mese<th>Appartamento<th>Inquilino<th>Dovuto<th>Pagato<th>Residuo<th>Stato<th></tr>
+ ${D.map(d=>`<tr data-f class="${d.late?'late':''}"><td data-l="Mese">${d.month.slice(0,7)}<td data-l="Appartamento">${esc(d.apartment)}<td data-l="Inquilino">${esc(d.tenant)}<td data-l="Dovuto">${eur(d.amount)}<td data-l="Pagato">${eur(d.paid)}<td data-l="Residuo">${eur(d.remaining)}<td data-l="Stato">${+d.remaining<=0?'Pagato':d.late?'IN RITARDO':+d.paid>0?'Parziale':'Da pagare'}<td class=act>${+d.remaining>0?`<button data-p=${d.id} data-r=${d.remaining}>Incassa</button>`:''}<button class=sec data-h=${d.id}>Pagamenti</button></tr>`).join('')}</table></div>
+ <p><small>Lascia vuoto il mese per vedere tutto lo storico.</small></p>`;filt();
  $('#mm').onchange=e=>dues(e.target.value);
  $('#gen').onclick=async()=>{if($('#mm').value)try{const r=await api('dues/generate',{method:'POST',body:{month:$('#mm').value}});alert(r.created+' canoni creati');dues($('#mm').value)}catch{}};
- $('#main').querySelector('table').onclick=e=>{const id=e.target.dataset.p;if(id)form('payments',[['paid_on','Data pagamento','date'],['amount','Importo €','number'],['method','Modalità','sel:bonifico,contanti,carta,altro'],['notes','Note']],{due_id:id,amount:e.target.dataset.r,paid_on:new Date().toISOString().slice(0,10)},()=>dues(m)).then?.(()=>{})}}
+ $('#main').querySelector('table').onclick=e=>{const id=e.target.dataset.p;
+  if(id)form('payments',[['paid_on','Data pagamento','date'],['amount','Importo €','number'],['method','Modalità','sel:bonifico,contanti,carta,altro'],['notes','Note']],{due_id:id,amount:e.target.dataset.r,paid_on:new Date().toISOString().slice(0,10)},()=>dues(m));
+  if(e.target.dataset.h)payDlg(e.target.dataset.h,m)}}
+async function payDlg(id,m){const L=(await api('payments')).filter(p=>p.due_id==id),d=$('#dlg');
+ d.innerHTML=`<div class=fb><h3>Pagamenti registrati</h3>${L.map(p=>`<p>${p.paid_on} · ${eur(p.amount)} · ${esc(p.method||'')} <button type=button class=sec data-x=${p.id}>🗑 Elimina</button></p>`).join('')||'<p>Nessun pagamento.</p>'}</div><div class=ft><button class=sec id=dd>Elimina canone</button><button id=cl>Chiudi</button></div>`;d.showModal();
+ d.onclick=async e=>{const x=e.target.dataset.x;if(x&&confirm('Eliminare questo pagamento?'))try{await api('payments/'+x,{method:'DELETE'});d.close();dues(m)}catch{}};
+ $('#cl').onclick=()=>d.close();$('#dd').onclick=async()=>{if(confirm('Eliminare il canone e i suoi pagamenti?'))try{await api('rent_dues/'+id,{method:'DELETE'});d.close();dues(m)}catch{}}}
 async function dash(m=thisM()){const[D,V2]=await Promise.all([api('dashboard?month='+m),api('dues')]),sum=k=>D.per.reduce((a,x)=>a+ +x[k],0),late=V2.filter(d=>d.late);
  $('#main').innerHTML=`<h2>Dashboard</h2><input type=month id=dm value="${m}"><div class=cards style="margin-top:10px">
  <div class=card>Appartamenti<b>${D.k.apartments}</b></div><div class=card>Inquilini attivi<b>${D.k.tenants}</b></div><div class=card>Affitti previsti<b>${eur(sum('expected'))}</b></div>
  <div class=card>Incassati<b>${eur(sum('collected'))}</b></div><div class=card>Da incassare<b>${eur(sum('expected')-sum('collected'))}</b></div><div class=card>Spese del mese<b>${eur(sum('expenses'))}</b></div></div>
- <h3>Per appartamento</h3>${D.per.map(p=>`<div class=card style="margin-bottom:8px"><b style="font-size:15px">${esc(p.name)}</b>Previsti ${eur(p.expected)} · Incassati ${eur(p.collected)} · Spese ${eur(p.expenses)} · Saldo ${eur(p.collected-p.expenses)}
+ ${D.k.tenants&&!sum('expected')?'<p class=card>Nessun canone generato per questo mese: vai in <b>Canoni</b> e premi “Genera canoni del mese”.</p>':''}<h3>Per appartamento</h3>${D.per.map(p=>`<div class=card style="margin-bottom:8px"><b style="font-size:15px">${esc(p.name)}</b>Previsti ${eur(p.expected)} · Incassati ${eur(p.collected)} · Spese ${eur(p.expenses)} · Saldo ${eur(p.collected-p.expenses)}
  <div class=bar><div style="width:${p.expected>0?Math.min(100,p.collected/p.expected*100):0}%"></div></div></div>`).join('')}
  <h3>Pagamenti in ritardo (${late.length})</h3><div class=sc><table>${late.map(d=>`<tr class=late><td>${d.month.slice(0,7)}<td>${esc(d.apartment)}<td>${esc(d.tenant)}<td>${eur(d.remaining)}</tr>`).join('')}</table></div>`;
  $('#dm').onchange=e=>dash(e.target.value)}
