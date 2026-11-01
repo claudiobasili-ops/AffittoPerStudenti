@@ -39,26 +39,31 @@ const $=s=>document.querySelector(s),esc=v=>String(v??'').replace(/[&<>"']/g,c=>
 eur=v=>Number(v).toLocaleString('it-IT',{style:'currency',currency:'EUR'}),thisM=()=>new Date().toISOString().slice(0,7);
 
 /* ===== Motore locale: i dati restano su questo dispositivo (IndexedDB) ===== */
-const TABLES=['apartments','rooms','tenants','contracts','rent_dues','payments','expense_types','expenses','allocations','allocation_shares','share_payments','documents'];
+const TABLES=['apartments','rooms','tenants','contracts','rent_dues','payments','expense_types','expenses','allocations','allocation_shares','share_payments','deposit_moves','documents'];
 const COLS={apartments:'name,address,city,rooms,beds,description,notes',rooms:'apartment_id,name,beds',tenants:'first_name,last_name,tax_code,phone,email,notes',
- contracts:'tenant_id,apartment_id,room_id,start_date,end_date,monthly_rent,due_day,notes',payments:'due_id,paid_on,amount,method,notes',
- expenses:'apartment_id,type_id,description,amount,spent_on,period_from,period_to,supplier,notes',expense_types:'name',share_payments:'share_id,paid_on,amount,method,notes'};
+ contracts:'tenant_id,apartment_id,room_id,start_date,end_date,monthly_rent,deposit,due_day,notes',payments:'due_id,paid_on,amount,method,notes',
+ expenses:'apartment_id,type_id,description,amount,spent_on,period_from,period_to,supplier,notes',expense_types:'name',share_payments:'share_id,paid_on,amount,method,notes',deposit_moves:'contract_id,kind,moved_on,amount,method,notes'};
 const REQ={apartments:['name','address','city'],rooms:['apartment_id','name'],tenants:['first_name','last_name'],contracts:['tenant_id','apartment_id','start_date','monthly_rent'],
- payments:['due_id','paid_on','amount'],expenses:['apartment_id','amount','spent_on','period_from','period_to'],expense_types:['name'],share_payments:['share_id','paid_on','amount']};
-const NUM=['rooms','beds','monthly_rent','due_day','amount'],FK={tenants:[['contracts','tenant_id']],apartments:[['contracts','apartment_id'],['expenses','apartment_id']],expense_types:[['expenses','type_id']],rooms:[['contracts','room_id']]},
+ payments:['due_id','paid_on','amount'],expenses:['apartment_id','amount','spent_on','period_from','period_to'],expense_types:['name'],share_payments:['share_id','paid_on','amount'],deposit_moves:['contract_id','kind','moved_on','amount']};
+const NUM=['rooms','beds','monthly_rent','deposit','due_day','amount'],FK={tenants:[['contracts','tenant_id']],apartments:[['contracts','apartment_id'],['expenses','apartment_id']],expense_types:[['expenses','type_id']],rooms:[['contracts','room_id']]},
  CAS={contracts:[['rent_dues','contract_id']],rent_dues:[['payments','due_id']],expenses:[['allocations','expense_id'],['documents','expense_id']],allocations:[['allocation_shares','allocation_id']],apartments:[['rooms','apartment_id']]};
 let DB;const P=r=>new Promise((ok,ko)=>{r.onsuccess=()=>ok(r.result);r.onerror=()=>ko(r.error)}),
  all=t=>P(DB.transaction(t).objectStore(t).getAll()),get=(t,id)=>P(DB.transaction(t).objectStore(t).get(id)),
  put=async(t,o)=>({...o,id:await P(DB.transaction(t,'readwrite').objectStore(t).put(o))}),
  sum0=a=>a.reduce((s,x)=>s+x,0),sumk=(a,k)=>a.reduce((s,x)=>s+x[k],0),today=()=>new Date().toISOString().slice(0,10);
-async function rm(t,id){if(t=='allocations'){const ss=(await all('allocation_shares')).filter(s=>s.allocation_id===id).map(s=>s.id);if((await all('share_payments')).some(p=>ss.includes(p.share_id)))throw'Ci sono incassi registrati su questa ripartizione: eliminali prima (menu Incassi spese)'}if(t=='contracts'){const ds=(await all('rent_dues')).filter(d=>d.contract_id===id).map(d=>d.id);if((await all('payments')).some(p=>ds.includes(p.due_id)))throw'Il contratto ha pagamenti registrati: per conservare lo storico imposta la data di uscita invece di eliminarlo'}for(const[c,k]of FK[t]||[])if((await all(c)).some(x=>x[k]===id))throw'Impossibile eliminare: ci sono dati collegati (storico da conservare)';
+async function rm(t,id){if(t=='deposit_moves'){const m=await get(t,id);if(m&&m.kind=='versamento'){const dr=(await depositRows()).find(d=>d.id===m.contract_id);if(dr&&dr.held-m.amount<-.005)throw'Impossibile eliminare: la caparra è già stata restituita (elimina prima la restituzione)'}}
+ if(t=='contracts'&&(await all('deposit_moves')).some(m=>m.contract_id===id))throw'Il contratto ha movimenti di caparra registrati: eliminali prima (menu Caparre)';if(t=='allocations'){const ss=(await all('allocation_shares')).filter(s=>s.allocation_id===id).map(s=>s.id);if((await all('share_payments')).some(p=>ss.includes(p.share_id)))throw'Ci sono incassi registrati su questa ripartizione: eliminali prima (menu Incassi spese)'}if(t=='contracts'){const ds=(await all('rent_dues')).filter(d=>d.contract_id===id).map(d=>d.id);if((await all('payments')).some(p=>ds.includes(p.due_id)))throw'Il contratto ha pagamenti registrati: per conservare lo storico imposta la data di uscita invece di eliminarlo'}for(const[c,k]of FK[t]||[])if((await all(c)).some(x=>x[k]===id))throw'Impossibile eliminare: ci sono dati collegati (storico da conservare)';
  for(const[c,k]of CAS[t]||[])for(const x of await all(c))if(x[k]===id)await rm(c,x.id);await P(DB.transaction(t,'readwrite').objectStore(t).delete(id))}
 function norm(t,b){const o={};for(const k of COLS[t].split(',')){let v=b[k];if(v===''||v===undefined)v=null;else if(k.endsWith('_id')||NUM.includes(k))v=Number(String(v).replace(',','.'));o[k]=v}if(b.id)o.id=Number(b.id);return o}
-async function check(t,o){if(t=='share_payments'){const sr=(await sharesRows()).find(s=>s.id===o.share_id);if(sr&&o.amount>sr.remaining+.005)throw"L'importo supera il residuo ("+sr.remaining.toFixed(2)+" €)"}
+async function check(t,o){if(t=='deposit_moves'){if(!['versamento','restituzione'].includes(o.kind))throw'Tipo di movimento non valido';const dr=(await depositRows()).find(d=>d.id===o.contract_id);
+  if(dr&&o.kind=='versamento'&&dr.deposit>0&&o.amount>dr.toPay+.005)throw"L'importo supera la caparra ancora da versare ("+dr.toPay.toFixed(2)+" €)";
+  if(dr&&o.kind=='restituzione'&&o.amount>dr.held+.005)throw"L'importo supera la caparra in deposito ("+dr.held.toFixed(2)+" €)"}
+ if(t=='contracts'&&o.deposit!=null&&o.deposit<0)throw'La caparra non può essere negativa';
+ if(t=='share_payments'){const sr=(await sharesRows()).find(s=>s.id===o.share_id);if(sr&&o.amount>sr.remaining+.005)throw"L'importo supera il residuo ("+sr.remaining.toFixed(2)+" €)"}
  if(t=='payments'){const du=(await duesRows()).find(d=>d.id===o.due_id);if(du&&o.amount>du.remaining+.005)throw"L'importo supera il residuo ("+du.remaining.toFixed(2)+" €)"}
  if(t=='contracts'&&o.due_day&&(o.due_day<1||o.due_day>28))throw'Il giorno di scadenza deve essere tra 1 e 28';
  if(t=='tenants'&&o.tax_code){o.tax_code=o.tax_code.toUpperCase().trim();if(!/^[A-Z0-9]{16}$/.test(o.tax_code))throw'Codice fiscale non valido (16 caratteri)'}for(const k of REQ[t]||[])if(o[k]==null||Number.isNaN(o[k]))throw'Compila il campo obbligatorio: '+k;
- if((t=='payments'||t=='expenses'||t=='share_payments')&&o.amount<=0)throw'L\'importo deve essere maggiore di zero';
+ if((t=='payments'||t=='expenses'||t=='share_payments'||t=='deposit_moves')&&o.amount<=0)throw'L\'importo deve essere maggiore di zero';
  if(t=='contracts'){if(o.end_date&&o.end_date<o.start_date)throw'La data di uscita precede quella di ingresso';
   if(o.room_id)for(const c of await all('contracts'))if(c.id!==o.id&&c.room_id===o.room_id&&o.start_date<=(c.end_date||'9999')&&c.start_date<=(o.end_date||'9999'))throw'La camera è già assegnata in quel periodo'}
  if(t=='expenses'&&o.period_to<o.period_from)throw'Periodo di competenza non valido'}
@@ -77,6 +82,12 @@ async function sharesRows(){const[Al,Sh,SP,E,Te,Ap,Ty]=await Promise.all(['alloc
  return Sh.map(s=>{const al=Al.find(a=>a.id===s.allocation_id),e=al&&E.find(x=>x.id===al.expense_id);if(!e)return null;const t=Te.find(x=>x.id===s.tenant_id),pays=SP.filter(p=>p.share_id===s.id).sort((x,y)=>y.paid_on.localeCompare(x.paid_on)||y.id-x.id),pc=sum0(pays.map(p=>Math.round(p.amount*100)));
   return{id:s.id,expense_id:e.id,desc:e.description||Ty.find(x=>x.id===e.type_id)?.name||'Spesa',spent_on:e.spent_on,apt:e.apartment_id,apartment:Ap.find(x=>x.id===e.apartment_id)?.name||'',tenant_id:s.tenant_id,tenant:t.first_name+' '+t.last_name,
    final:s.final_cents/100,paid:pc/100,remaining:(s.final_cents-pc)/100,payments:pays}}).filter(Boolean).sort((a,b)=>b.spent_on.localeCompare(a.spent_on)||a.tenant.localeCompare(b.tenant))}
+async function depositRows(){const[C,Te,Ap,M]=await Promise.all(['contracts','tenants','apartments','deposit_moves'].map(all)),rk={'Da restituire':0,'Da versare':1,'Versata in parte':1,'Versata':2,'Restituita in parte':2,'Restituita':3};
+ return C.map(c=>{const mv=M.filter(m=>m.contract_id===c.id).sort((a,b)=>b.moved_on.localeCompare(a.moved_on)||b.id-a.id);if(!(c.deposit>0)&&!mv.length)return null;
+  const cs=k=>sum0(mv.filter(m=>m.kind===k).map(m=>Math.round(m.amount*100)))/100,paid=cs('versamento'),ret=cs('restituzione'),held=Math.round((paid-ret)*100)/100,dep=c.deposit||0,toPay=Math.max(0,Math.round((dep-paid)*100)/100),ended=!!c.end_date&&c.end_date<today(),t=Te.find(x=>x.id===c.tenant_id);
+  const status=ret>0&&held<=.004?'Restituita':held>.004&&ended?'Da restituire':ret>0?'Restituita in parte':paid<=0?'Da versare':toPay>.004?'Versata in parte':'Versata';
+  return{id:c.id,tenant:t.first_name+' '+t.last_name,apartment:Ap.find(x=>x.id===c.apartment_id)?.name||'',apt:c.apartment_id,start:c.start_date,end:c.end_date,deposit:dep,paid,returned:ret,held,toPay,status,moves:mv}})
+  .filter(Boolean).sort((a,b)=>rk[a.status]-rk[b.status]||a.tenant.localeCompare(b.tenant))}
 async function route(p,o){const m=o.method||'GET',b=o.body,[path,qs]=p.split('?'),a=path.split('/'),Q=new URLSearchParams(qs||'');
  if(COLS[a[0]]&&a.length<3){const t=a[0];if(m=='GET')return(await all(t)).sort((x,y)=>y.id-x.id);
   if(m=='DELETE'){await rm(t,+a[1]);return{ok:1}}const x=norm(t,b);if(a[1])x.id=+a[1];await check(t,x);
@@ -88,6 +99,7 @@ async function route(p,o){const m=o.method||'GET',b=o.body,[path,qs]=p.split('?'
  if(path=='dues/generate'){const mo=b.month+'-01',last=new Date(Date.UTC(+b.month.slice(0,4),+b.month.slice(5),0)).toISOString().slice(0,10),D=await all('rent_dues');let n=0;
   for(const c of await all('contracts'))if(c.start_date<=last&&(!c.end_date||c.end_date>=mo)&&!D.some(d=>d.contract_id===c.id&&d.month===mo)){await put('rent_dues',{contract_id:c.id,month:mo,amount:c.monthly_rent});n++}return{created:n}}
  if(path=='shares_due')return sharesRows();
+ if(path=='deposits')return depositRows();
  if(path=='dashboard'){const mo=Q.get('month'),R=await duesRows(mo),Ex=await all('expenses'),Ap=await all('apartments'),t0=today(),SR=await sharesRows(),AD=await duesRows(),cm=thisM(),r2=v=>Math.round(v*100)/100,alIds=new Set((await all('allocations')).map(a=>a.expense_id)),
    open=AD.filter(d=>d.remaining>0),arrears=r2(sumk(open.filter(d=>d.month.slice(0,7)<cm),'remaining')),current=r2(sumk(open.filter(d=>d.month.slice(0,7)===cm),'remaining')),expDue=r2(sumk(SR,'remaining'));
   return{per:Ap.sort((x,y)=>x.name.localeCompare(y.name)).map(q=>({id:q.id,name:q.name,expected:sumk(R.filter(d=>d.apt===q.id),'amount'),collected:sumk(R.filter(d=>d.apt===q.id),'paid'),expenses:sumk(Ex.filter(e=>e.apartment_id===q.id&&e.spent_on.slice(0,7)===mo),'amount'),
@@ -118,7 +130,7 @@ async function route(p,o){const m=o.method||'GET',b=o.body,[path,qs]=p.split('?'
  throw'Operazione non supportata'}
 async function api(p,o={}){try{return await route(p,o)}catch(e){alert(typeof e==='string'?e:'Errore: '+(e?.message||e));throw 0}}
 function doPrint(){$('#pa').innerHTML=$('#pr').innerHTML;print()}
-let curM=thisM();const FAP={expenses:'',dues:'',shares:''},fd=d=>d?d.split('-').reverse().join('/'):'',
+let curM=thisM();const FAP={expenses:'',dues:'',shares:'',deposits:''},fd=d=>d?d.split('-').reverse().join('/'):'',
  addD=(d,n)=>{const x=new Date(d+'T00:00:00Z');x.setUTCDate(x.getUTCDate()+n);return x.toISOString().slice(0,10)};
 function aptSel(AP,v){return`<select id=fa><option value="">Tutti gli appartamenti</option>${AP.map(a=>`<option value=${a.id} ${a.id==v?'selected':''}>${esc(a.name)}</option>`).join('')}</select>`}
 async function roomInfo(m){const[Ro,C,Te]=await Promise.all(['rooms','contracts','tenants'].map(all)),ms=m+'-01',me=new Date(Date.UTC(+m.slice(0,4),+m.slice(5),0)).toISOString().slice(0,10),o={};
@@ -127,7 +139,7 @@ async function roomInfo(m){const[Ro,C,Te]=await Promise.all(['rooms','contracts'
   else{const pv=cs.filter(c=>c.end_date&&c.end_date<ms).map(c=>c.end_date).sort().pop(),nx=cs.filter(c=>c.start_date>me).map(c=>c.start_date).sort()[0];
    o[r.id]={st:'Libera',per:'da '+(pv?fd(addD(pv,1)):'—')+' a '+(nx?fd(addD(nx,-1)):'aperto')}}}return o}
 const N=v=>Number(String(v??'').replace(',','.'))||0;
-async function initDB(){DB=await new Promise((ok,ko)=>{const r=indexedDB.open('affitti',2);r.onupgradeneeded=()=>TABLES.forEach(t=>{if(!r.result.objectStoreNames.contains(t))r.result.createObjectStore(t,{keyPath:'id',autoIncrement:true})});r.onsuccess=()=>ok(r.result);r.onerror=()=>ko(r.error)});
+async function initDB(){DB=await new Promise((ok,ko)=>{const r=indexedDB.open('affitti',3);r.onupgradeneeded=()=>TABLES.forEach(t=>{if(!r.result.objectStoreNames.contains(t))r.result.createObjectStore(t,{keyPath:'id',autoIncrement:true})});r.onsuccess=()=>ok(r.result);r.onerror=()=>ko(r.error)});
  if(!(await all('expense_types')).length)for(const n of['Elettricità','Gas','Acqua','Riscaldamento','Internet','Spese condominiali','Manutenzione','Tassa rifiuti','Altro'])await put('expense_types',{name:n});
  navigator.storage?.persist?.();
  try{if((await all('apartments')).length&&Date.now()-(+localStorage.lastBackup||0)>14*864e5)setTimeout(backupUI,800)}catch{}}
@@ -164,9 +176,9 @@ const A=['apartment_id','Appartamento','ref:apartments'];
 const S={apartments:['Appartamenti',[['name','Nome'],['address','Indirizzo'],['city','Città'],['rooms','Camere','number'],['beds','Posti letto','number'],['description','Descrizione'],['notes','Note']]],
  tenants:['Inquilini',[['first_name','Nome'],['last_name','Cognome'],['tax_code','Codice fiscale'],['phone','Telefono','tel'],['email','Email','email'],['notes','Note']]],
  rooms:['Camere',[A,['name','Camera'],['beds','Posti letto','number']]],
- contracts:['Contratti',[['tenant_id','Inquilino','ref:tenants'],A,['room_id','Camera','ref:rooms'],['start_date','Ingresso','date'],['end_date','Uscita','date'],['monthly_rent','Canone €','number'],['due_day','Giorno scadenza','number'],['notes','Note']]],
+ contracts:['Contratti',[['tenant_id','Inquilino','ref:tenants'],A,['room_id','Camera','ref:rooms'],['start_date','Ingresso','date'],['end_date','Uscita','date'],['monthly_rent','Canone €','number'],['deposit','Caparra €','number'],['due_day','Giorno scadenza','number'],['notes','Note']]],
  expenses:['Spese',[A,['type_id','Tipologia','ref:expense_types'],['description','Descrizione'],['amount','Importo €','number'],['spent_on','Data','date'],['period_from','Competenza dal','date'],['period_to','Competenza al','date'],['supplier','Fornitore'],['notes','Note']]]};
-const V={dash:['Dashboard',()=>dash()],dues:['Canoni',()=>dues()],expenses:[S.expenses[0],()=>list('expenses')],shares:['Incassi spese',()=>sharesView()],report:['Report',()=>report()],contracts:[S.contracts[0],()=>list('contracts')],apartments:[S.apartments[0],()=>list('apartments')],rooms:[S.rooms[0],()=>list('rooms')],tenants:[S.tenants[0],()=>list('tenants')]};
+const V={dash:['Dashboard',()=>dash()],dues:['Canoni',()=>dues()],expenses:[S.expenses[0],()=>list('expenses')],shares:['Incassi spese',()=>sharesView()],report:['Report',()=>report()],deposits:['Caparre',()=>depositsView()],contracts:[S.contracts[0],()=>list('contracts')],apartments:[S.apartments[0],()=>list('apartments')],rooms:[S.rooms[0],()=>list('rooms')],tenants:[S.tenants[0],()=>list('tenants')]};
 function nav(){$('#nav').innerHTML=Object.entries(V).map(([k,v])=>`<button data-k=${k}>${v[0]}</button>`).join('')+'<button id=bk>Backup</button>'}
 $('#nav').onclick=e=>{const k=e.target.dataset.k;if(e.target.id=='bk')backupUI();if(k){$('#main').onclick=null;document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b==e.target));V[k][1]()}};
 function login(){$('#app').hidden=true;$('#login').hidden=false}
@@ -225,6 +237,23 @@ async function collectDlg(id,after){const d=$('#dlg'),L=await api(`expenses/${id
  d.onclick=async ev=>{const x=ev.target.dataset.x,s=ev.target.dataset.s;
   if(x&&confirm('Eliminare questo incasso?'))try{await api('share_payments/'+x,{method:'DELETE'});collectDlg(id,after)}catch{}
   if(s)form('share_payments',[['paid_on','Data incasso','date'],['amount','Importo €','number'],['method','Modalità','sel:bonifico,contanti,carta,altro'],['notes','Note']],{share_id:s,amount:ev.target.dataset.r,paid_on:today()},()=>collectDlg(id,after))}}
+async function depositDlg(id,after){const d=$('#dlg'),r=(await api('deposits')).find(x=>x.id===id);d.onclick=null;
+ if(!r){d.close();return}
+ d.innerHTML=`<div class=fb><h3>Caparra</h3><p><b>${esc(r.tenant)}</b> · ${esc(r.apartment)}<br><small>Contratto dal ${fd(r.start)} a ${r.end?fd(r.end):'in corso'}</small></p>
+  <p>Caparra ${eur(r.deposit)} · Versata ${eur(r.paid)} · Restituita ${eur(r.returned)}<br><strong>In deposito ${eur(r.held)}</strong>${r.toPay>.004?' · Da versare '+eur(r.toPay):''} · <i>${r.status}</i></p>
+  <h4>Movimenti</h4>${r.moves.map(m=>`<div>${fd(m.moved_on)} · ${m.kind=='versamento'?'Versamento':'Restituzione'} ${eur(m.amount)} · ${esc(m.method||'')} <button type=button class=sec data-x=${m.id} style="min-height:32px;padding:2px 8px">🗑</button></div>`).join('')||'<p>Nessun movimento.</p>'}
+  <div style="margin-top:10px">${r.toPay>.004?`<button type=button data-n=versamento data-a=${r.toPay}>Registra versamento</button>`:''}${r.held>.004?`<button type=button data-n=restituzione data-a=${r.held}>Registra restituzione</button>`:''}</div></div><div class=ft><button class=sec id=cl>Chiudi</button></div>`;
+ if(!d.open)d.showModal();$('#cl').onclick=()=>{d.close();after?.()};
+ d.onclick=async ev=>{const x=ev.target.dataset.x,n=ev.target.dataset.n;
+  if(x&&confirm('Eliminare questo movimento?'))try{await api('deposit_moves/'+x,{method:'DELETE'});depositDlg(id,after)}catch{}
+  if(n)form('deposit_moves',[['moved_on',n=='versamento'?'Data versamento':'Data restituzione','date'],['amount','Importo €','number'],['method','Modalità','sel:bonifico,contanti,carta,altro'],['notes','Note']],{contract_id:id,kind:n,amount:ev.target.dataset.a,moved_on:today()},()=>depositDlg(id,after))}}
+async function depositsView(){const D0=await api('deposits'),AP=await api('apartments'),fa=FAP.deposits,D=fa?D0.filter(d=>d.apt==fa):D0;
+ $('#main').innerHTML=`<h2>Caparre</h2>${aptSel(AP,fa)} <input id=q placeholder="Cerca inquilino…"><div class=cards style="margin:10px 0"><div class=card>Caparre pattuite<b>${eur(sumk(D,'deposit'))}</b></div><div class=card>Da versare<b>${eur(sumk(D,'toPay'))}</b></div><div class=card>In deposito<b>${eur(sumk(D,'held'))}</b></div><div class=card>Da restituire (contratti conclusi)<b>${eur(sumk(D.filter(d=>d.status=='Da restituire'),'held'))}</b></div></div>
+ <div class=sc><table class=rt><tr><th>Inquilino<th>Appartamento<th>Contratto<th>Caparra<th>Versata<th>Restituita<th>In deposito<th>Stato<th></tr>
+ ${D.map(r=>`<tr data-f data-c=${r.id} class="${r.status=='Da restituire'?'late':''}"><td data-l="Inquilino">${esc(r.tenant)}<td data-l="Appartamento">${esc(r.apartment)}<td data-l="Contratto">${fd(r.start)} – ${r.end?fd(r.end):'in corso'}<td data-l="Caparra">${eur(r.deposit)}<td data-l="Versata">${eur(r.paid)}<td data-l="Restituita">${eur(r.returned)}<td data-l="In deposito">${eur(r.held)}<td data-l="Stato">${r.status}<td class=act><button>Gestisci</button></tr>`).join('')}</table></div>
+ ${D.length?'':'<p>Nessuna caparra: inserisci l\'importo nel campo “Caparra €” del contratto.</p>'}`;filt();
+ $('#fa').onchange=e=>{FAP.deposits=e.target.value;depositsView()};
+ $('#main').querySelector('table').onclick=e=>{const tr=e.target.closest('tr[data-c]');if(tr&&e.target.tagName=='BUTTON')depositDlg(+tr.dataset.c,depositsView)}}
 async function sharesView(){const L0=await api('shares_due'),AP=await api('apartments'),fa=FAP.shares,L=fa?L0.filter(s=>s.apt==fa):L0,st=s=>s.remaining<=0.004?'Incassata':s.paid>0?'Parziale':'Da incassare';
  L.sort((a,b)=>(b.remaining>0.004)-(a.remaining>0.004));
  $('#main').innerHTML=`<h2>Incassi spese</h2>${aptSel(AP,fa)} <input id=q placeholder="Cerca inquilino o spesa…"><p><b>Da incassare: ${eur(sumk(L,'remaining'))}</b></p><div class=sc><table class=rt><tr><th>Data spesa<th>Appartamento<th>Spesa<th>Inquilino<th>Quota<th>Incassato<th>Residuo<th>Stato<th></tr>
