@@ -21,7 +21,13 @@ label.ck{display:flex;align-items:center;gap:10px}.ck input{width:22px;height:22
 .bdg{display:inline-block;font-weight:700;padding:2px 10px;border-radius:8px;border:1px solid;white-space:nowrap}
 .bdg.ok{color:#15803d;background:#dcfce7;border-color:#86efac}.bdg.no{color:#b91c1c;background:#fee2e2;border-color:#fca5a5}.bdg.nu{color:#4b5563;background:#f3f4f6;border-color:#d1d5db}
 tr.late .bdg.no{background:#fff1f2}
-.mnav{display:inline-flex;align-items:center;gap:4px;vertical-align:middle}.mnav button{min-width:44px;font-size:20px;padding:6px 10px;margin:0}.mnav #dm,.mnav #mm,.mnav #rmm{flex:1;width:auto;min-width:0;margin:6px 0}
+.mnav{display:inline-flex;align-items:center;gap:4px;vertical-align:middle}.mnav button{min-width:44px;font-size:20px;padding:6px 10px;margin:0}.mnav #dm,.mnav #mm,.mnav #rmm,.mnav #cmm{flex:1;width:auto;min-width:0;margin:6px 0}
+.cg{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:10px;margin-top:10px}.cg .card h3{margin:0 0 8px;font-size:16px}
+.dn{display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap}.dn svg{width:150px;height:150px;flex:none}
+.lg{list-style:none;margin:0;padding:0;flex:1 1 230px;min-width:0}.lg li{display:flex;align-items:center;gap:6px;margin:4px 0;white-space:nowrap}.lg i{width:12px;height:12px;border-radius:3px;flex:none}.lg .v{margin-left:auto;font-weight:700}.lg small{color:#6b7280;min-width:34px;text-align:right}
+.stk{display:flex;height:22px;border-radius:6px;overflow:hidden;background:#e5e7eb;margin:8px 0}.stk div{height:100%}
+.bg{margin:0 0 14px}.bn{font-weight:700;margin-bottom:4px}.br{display:flex;align-items:center;gap:8px;margin:3px 0;font-size:13px}.bl{width:92px;flex:none;color:#4b5563;white-space:nowrap}.bt{flex:1;height:12px;background:#e5e7eb;border-radius:6px;overflow:hidden}.bt div{height:100%;border-radius:6px}.bv{width:84px;text-align:right;flex:none;font-weight:600;white-space:nowrap}
+.mut{color:#6b7280}
 .ver{margin:-6px 0 10px;font-size:13px;color:#6b7280}
 .meta{margin-top:18px;padding-top:10px;border-top:1px solid #d1d5db;font-size:13px;color:#6b7280}.meta div{margin:2px 0}.meta b{color:#374151;font-weight:600}
 .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}.card{background:#fff;padding:12px;border-radius:12px}.card b{display:block;font-size:20px}
@@ -32,7 +38,7 @@ tr.late .bdg.no{background:#fff1f2}
  nav{position:fixed;left:0;right:0;bottom:0;top:auto;z-index:20;width:auto;height:auto;flex-direction:row;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;gap:2px;padding:6px 8px calc(6px + env(safe-area-inset-bottom))}
  nav button{flex:0 0 auto;white-space:nowrap;padding:10px 14px}
  main{padding:12px calc(12px + env(safe-area-inset-right)) calc(92px + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left))}
- h2{font-size:22px}#q,#mm,#dm,#fa,#rmm,#ra,#rt,#rf,#rto{width:100%;margin:6px 0}.mnav{display:flex}dialog{width:calc(100vw - 16px)}.cards{grid-template-columns:repeat(2,1fr)}.card b{font-size:18px}
+ h2{font-size:22px}#q,#mm,#dm,#cmm,#fa,#rmm,#ra,#rt,#rf,#rto{width:100%;margin:6px 0}.mnav{display:flex}dialog{width:calc(100vw - 16px)}.cards{grid-template-columns:repeat(2,1fr)}.card b{font-size:18px}
  .sc{overflow:visible}table.rt,table.rt tbody{display:block;background:none}table.rt tbody{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px}table.rt tr:has(th){display:none}
  table.rt tr{display:block;background:#fff;border-radius:12px;padding:8px 12px;box-shadow:0 1px 2px #0002}table.rt tr.late{background:#fee2e2}
  table.rt td{display:flex;justify-content:space-between;gap:12px;border:0;padding:5px 0;white-space:normal;text-align:right;overflow-wrap:anywhere}
@@ -216,7 +222,7 @@ const S={apartments:['Appartamenti',[['name','Nome'],['address','Indirizzo'],['c
  rooms:['Camere',[A,['name','Camera'],['beds','Posti letto','number']]],
  contracts:['Contratti',[['tenant_id','Inquilino','ref:tenants'],A,['room_id','Camera','ref:rooms'],['start_date','Ingresso','date'],['end_date','Uscita','date'],['monthly_rent','Canone €','number'],['deposit','Caparra €','number'],['due_day','Giorno scadenza','number'],['notes','Note']]],
  expenses:['Spese',[A,['type_id','Tipologia','ref:expense_types'],['description','Descrizione'],['amount','Importo €','number'],['spent_on','Scadenza','date'],['period_from','Competenza dal','date'],['period_to','Competenza al','date'],['supplier','Fornitore'],['notes','Note']]]};
-const V={dash:['Dashboard',()=>dash()],dues:['Canoni',()=>dues()],expenses:[S.expenses[0],()=>list('expenses')],shares:['Incassi spese',()=>sharesView()],report:['Report',()=>report()],deposits:['Caparre',()=>depositsView()],contracts:[S.contracts[0],()=>list('contracts')],apartments:[S.apartments[0],()=>list('apartments')],rooms:[S.rooms[0],()=>list('rooms')],tenants:[S.tenants[0],()=>list('tenants')]};
+const V={dash:['Dashboard',()=>dash()],charts:['Grafici',()=>charts()],dues:['Canoni',()=>dues()],expenses:[S.expenses[0],()=>list('expenses')],shares:['Incassi spese',()=>sharesView()],report:['Report',()=>report()],deposits:['Caparre',()=>depositsView()],contracts:[S.contracts[0],()=>list('contracts')],apartments:[S.apartments[0],()=>list('apartments')],rooms:[S.rooms[0],()=>list('rooms')],tenants:[S.tenants[0],()=>list('tenants')]};
 function nav(){$('#nav').innerHTML=Object.entries(V).map(([k,v])=>`<button data-k=${k}>${v[0]}</button>`).join('')+'<button id=bk>Backup</button>'}
 $('#nav').onclick=e=>{const k=e.target.dataset.k;if(e.target.id=='bk')backupUI();if(k){$('#main').onclick=null;document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b==e.target));V[k][1]()}};
 function login(){$('#app').hidden=true;$('#login').hidden=false}
@@ -311,6 +317,25 @@ async function payDlg(id,m){const L=(await api('payments')).filter(p=>p.due_id==
  d.innerHTML=`<div class=fb><h3>Pagamenti registrati</h3>${L.map(p=>`<p>${p.paid_on} · ${eur(p.amount)} · ${esc(p.method||'')} <button type=button class=sec data-x=${p.id}>🗑 Elimina</button></p>`).join('')||'<p>Nessun pagamento.</p>'}</div><div class=ft><button class=sec id=dd>Elimina canone</button><button id=cl>Chiudi</button></div>`;d.showModal();
  d.onclick=async e=>{const x=e.target.dataset.x;if(x&&confirm('Eliminare questo pagamento?'))try{await api('payments/'+x,{method:'DELETE'});d.close();dues(m)}catch{}};
  $('#cl').onclick=()=>d.close();$('#dd').onclick=async()=>{if(confirm('Eliminare il canone e i suoi pagamenti?'))try{await api('rent_dues/'+id,{method:'DELETE'});d.close();dues(m)}catch{}}}
+function donut(parts,c1,c2,lab){const T=parts.reduce((a,p)=>a+p.v,0);if(T<=0)return'<p class=mut>Nessun dato per questo mese.</p>';let off=25;
+ const arcs=parts.filter(p=>p.v>0).map(p=>{const l=p.v/T*100,a=`<circle cx=21 cy=21 r=15.915 fill=none stroke="${p.c}" stroke-width=6 stroke-dasharray="${l} ${100-l}" stroke-dashoffset="${off}"></circle>`;off-=l;return a}).join('');
+ return`<div class=dn><svg viewBox="0 0 42 42" role=img aria-label="${esc(lab)}"><circle cx=21 cy=21 r=15.915 fill=none stroke="#e5e7eb" stroke-width=6></circle>${arcs}<text x=21 y=21.8 text-anchor=middle font-size=7 font-weight=700 fill="#111827">${esc(c1)}</text><text x=21 y=26.6 text-anchor=middle font-size=3.2 fill="#6b7280">${esc(c2)}</text></svg>
+ <ul class=lg>${parts.map(p=>`<li><i style="background:${p.c}"></i>${esc(p.n)}<span class=v>${eur(p.v)}</span><small>${Math.round(p.v/T*100)}%</small></li>`).join('')}</ul></div>`}
+function hbars(rows,ser){const mx=Math.max(0,...rows.flatMap(r=>r.v));if(!rows.length)return'<p class=mut>Nessun appartamento.</p>';
+ return rows.map(r=>`<div class=bg><div class=bn>${esc(r.n)}</div>${ser.map((x,i)=>`<div class=br><span class=bl>${x.n}</span><div class=bt><div style="width:${mx>0?Math.max(0,r.v[i])/mx*100:0}%;background:${x.c}"></div></div><span class=bv>${eur(r.v[i])}</span></div>`).join('')}</div>`).join('')}
+async function charts(m){m=m||curM;curM=m;const D=await api('dashboard?month='+m),r2=v=>Math.round(v*100)/100,sum=k=>r2(D.per.reduce((a,x)=>a+ +x[k],0)),
+ ex=sum('expected'),co=sum('collected'),se=sum('expenses'),si=sum('expCollected'),sd=sum('expToCollect'),A=D.asOf,G='#16a34a',R='#dc2626',B='#1d4ed8',
+ pc=(a,b)=>b>0?Math.round(a/b*100)+'%':'—',
+ tot=[{n:'Ritardi mesi precedenti',v:A.arrears,c:'#b91c1c'},{n:'Canoni del mese in corso',v:A.current,c:'#f59e0b'},{n:'Spese da incassare (tutte)',v:A.expDue,c:'#7c3aed'}];
+ $('#main').innerHTML=`<h2>Grafici</h2>${mn('cmm',m)}
+ <div class=cg><div class=card><h3>Canoni del mese</h3>${donut([{n:'Incassati',v:Math.max(0,co),c:G},{n:'Da incassare',v:Math.max(0,r2(ex-co)),c:R}],pc(co,ex),'incassato','Canoni incassati e da incassare')}</div>
+ <div class=card><h3>Spese del mese</h3>${donut([{n:'Incassate',v:si,c:G},{n:'Da incassare',v:sd,c:R},{n:'Non ripartite',v:Math.max(0,r2(se-si-sd)),c:'#9ca3af'}],pc(si,se),'incassato','Spese incassate, da incassare e non ripartite')}</div></div>
+ <div class=card style="margin-top:10px"><h3 style="margin:0 0 6px">Totale da incassare ad oggi (${today().split('-').reverse().join('/')})</h3>
+ ${A.total>0?`<div class=stk role=img aria-label="Composizione del totale da incassare ad oggi">${tot.filter(x=>x.v>0).map(x=>`<div style="width:${x.v/A.total*100}%;background:${x.c}"></div>`).join('')}</div>`:'<p class=mut>Niente da incassare.</p>'}
+ <ul class=lg>${tot.map(x=>`<li><i style="background:${x.c}"></i>${x.n}<span class=v>${eur(x.v)}</span></li>`).join('')}<li style="border-top:1px solid #e5e7eb;padding-top:4px"><span><strong>Totale ad oggi</strong></span><span class=v>${eur(A.total)}</span></li></ul></div>
+ <div class=cg><div class=card><h3>Canoni per appartamento</h3>${hbars(D.per.map(p=>({n:p.name,v:[+p.expected,+p.collected,Math.max(0,r2(p.expected-p.collected))]})),[{n:'Previsti',c:B},{n:'Incassati',c:G},{n:'Da incassare',c:R}])}</div>
+ <div class=card><h3>Spese per appartamento</h3>${hbars(D.per.map(p=>({n:p.name,v:[+p.expenses,+p.expCollected,+p.expToCollect]})),[{n:'Previste',c:B},{n:'Incassate',c:G},{n:'Da incassare',c:R}])}</div></div>`;
+ $('#cmm').onchange=e=>charts(e.target.value||curM)}
 async function dash(m){m=m||curM;curM=m;const[D,V2,lm,le,lr,rf]=await Promise.all([api('dashboard?month='+m),api('dues'),gm('lastModified'),lastExp(),gm('lastRestore'),gm('restoredFrom')]),ref=[le,rf].filter(Boolean).sort().pop(),need=await needBackup(lm,ref),sum=k=>D.per.reduce((a,x)=>a+ +x[k],0),late=V2.filter(d=>d.late);
  $('#main').innerHTML=`<h2>Dashboard</h2><div class=ver>Versione ${APP_VERSION}</div>${mn('dm',m)}<div class=cards style="margin-top:10px">
  <div class=card>Appartamenti<b>${D.k.apartments}</b></div><div class=card>Inquilini attivi<b>${D.k.tenants}</b></div><div class=card>Affitti previsti<b>${eur(sum('expected'))}</b></div>
