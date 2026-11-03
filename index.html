@@ -28,8 +28,9 @@ tr.late .bdg.no{background:#fff1f2}
 .stk{display:flex;height:22px;border-radius:6px;overflow:hidden;background:#e5e7eb;margin:8px 0}.stk div{height:100%}
 .bg{margin:0 0 14px}.bn{font-weight:700;margin-bottom:4px}.br{display:flex;align-items:center;gap:8px;margin:3px 0;font-size:13px}.bl{width:92px;flex:none;color:#4b5563;white-space:nowrap}.bt{flex:1;height:12px;background:#e5e7eb;border-radius:6px;overflow:hidden}.bt div{height:100%;border-radius:6px}.bv{width:84px;text-align:right;flex:none;font-weight:600;white-space:nowrap}
 .mut{color:#6b7280}
-.at{display:inline-block;font-weight:700;padding:1px 10px;border-radius:999px;line-height:1.5;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.at{display:inline-block;font-weight:700;padding:2px 10px;border-radius:8px;border:1px solid rgba(0,0,0,.2);-webkit-print-color-adjust:exact;print-color-adjust:exact}
 .tn{display:inline-block;font-weight:700;color:#1e3a8a;background:#e0e7ff;padding:0 8px;border-radius:6px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+button.has{background:#16a34a}.okm{color:#15803d;background:#dcfce7;border:1px solid #86efac;border-radius:8px;padding:6px 10px;font-weight:700}
 .sw{display:inline-block;width:22px;height:22px;border-radius:50%;vertical-align:middle;border:1px solid #0003}
 .ver{margin:-6px 0 10px;font-size:13px;color:#6b7280}
 .meta{margin-top:18px;padding-top:10px;border-top:1px solid #d1d5db;font-size:13px;color:#6b7280}.meta div{margin:2px 0}.meta b{color:#374151;font-weight:600}
@@ -56,19 +57,19 @@ tr.late .bdg.no{background:#fff1f2}
 const $=s=>document.querySelector(s),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),
 eur=v=>Number(v).toLocaleString('it-IT',{style:'currency',currency:'EUR'}),thisM=()=>new Date().toISOString().slice(0,7);
 
-const APP_VERSION='1.2.1';
+const APP_VERSION='1.3.0';
 const mn=(id,v)=>`<span class=mnav><button type=button class=sec data-mn="${id}:-1" aria-label="Mese precedente">‹</button><input type=month id=${id} value="${v}"><button type=button class=sec data-mn="${id}:1" aria-label="Mese successivo">›</button></span>`;
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-mn]');if(!b)return;const[id,d]=b.dataset.mn.split(':'),i=document.getElementById(id);if(!i)return;
  const[y,m]=(i.value||thisM()).split('-').map(Number);i.value=new Date(Date.UTC(y,m-1+ +d,1)).toISOString().slice(0,7);i.dispatchEvent(new Event('change',{bubbles:true}))});
 /* ===== Motore locale: i dati restano su questo dispositivo (IndexedDB) ===== */
 let APC={},APN='#2563eb';const PAL=['#2563eb','#ea580c','#9333ea','#db2777','#0891b2','#ca8a04','#4f46e5','#0d9488','#92400e','#475569'];
 const TABLES=['apartments','rooms','tenants','contracts','rent_dues','payments','expense_types','expenses','allocations','allocation_shares','share_payments','deposit_moves','documents'];
-const COLS={apartments:'name,color,address,city,rooms,beds,description,notes',rooms:'apartment_id,name,beds',tenants:'first_name,last_name,tax_code,phone,email,notes',
+const COLS={apartments:'name,color,address,city,rooms,beds,description,notes',rooms:'apartment_id,name,beds,sqm',tenants:'first_name,last_name,tax_code,phone,email,notes',
  contracts:'tenant_id,apartment_id,room_id,start_date,end_date,monthly_rent,deposit,due_day,notes',payments:'due_id,paid_on,amount,method,notes',
  expenses:'apartment_id,type_id,description,amount,spent_on,period_from,period_to,supplier,notes',expense_types:'name',share_payments:'share_id,paid_on,amount,method,notes',deposit_moves:'contract_id,kind,moved_on,amount,method,notes'};
 const REQ={apartments:['name','address','city'],rooms:['apartment_id','name'],tenants:['first_name','last_name'],contracts:['tenant_id','apartment_id','start_date','monthly_rent'],
  payments:['due_id','paid_on','amount'],expenses:['apartment_id','amount','spent_on','period_from','period_to'],expense_types:['name'],share_payments:['share_id','paid_on','amount'],deposit_moves:['contract_id','kind','moved_on','amount']};
-const NUM=['rooms','beds','monthly_rent','deposit','due_day','amount'],FK={tenants:[['contracts','tenant_id']],apartments:[['contracts','apartment_id'],['expenses','apartment_id']],expense_types:[['expenses','type_id']],rooms:[['contracts','room_id']]},
+const NUM=['rooms','beds','sqm','monthly_rent','deposit','due_day','amount'],FK={tenants:[['contracts','tenant_id']],apartments:[['contracts','apartment_id'],['expenses','apartment_id']],expense_types:[['expenses','type_id']],rooms:[['contracts','room_id']]},
  CAS={contracts:[['rent_dues','contract_id']],rent_dues:[['payments','due_id']],expenses:[['allocations','expense_id'],['documents','expense_id']],allocations:[['allocation_shares','allocation_id']],apartments:[['rooms','apartment_id']]};
 let DB;const P=r=>new Promise((ok,ko)=>{r.onsuccess=()=>ok(r.result);r.onerror=()=>ko(r.error)}),
  all=t=>P(DB.transaction(t).objectStore(t).getAll()),get=(t,id)=>P(DB.transaction(t).objectStore(t).get(id)),
@@ -101,7 +102,14 @@ async function check(t,o){if(t=='deposit_moves'){if(!['versamento','restituzione
  if(t=='tenants'&&o.tax_code){o.tax_code=o.tax_code.toUpperCase().trim();if(!/^[A-Z0-9]{16}$/.test(o.tax_code))throw'Codice fiscale non valido (16 caratteri)'}for(const k of REQ[t]||[])if(o[k]==null||Number.isNaN(o[k]))throw'Compila il campo obbligatorio: '+k;
  if((t=='payments'||t=='expenses'||t=='share_payments'||t=='deposit_moves')&&o.amount<=0)throw'L\'importo deve essere maggiore di zero';
  if(t=='contracts'){if(o.end_date&&o.end_date<o.start_date)throw'La data di uscita precede quella di ingresso';
-  if(o.room_id)for(const c of await all('contracts'))if(c.id!==o.id&&c.room_id===o.room_id&&o.start_date<=(c.end_date||'9999')&&c.start_date<=(o.end_date||'9999'))throw'La camera è già assegnata in quel periodo'}
+  if(o.room_id){const rm=await get('rooms',o.room_id),cap=Math.max(1,rm?.beds||1),oth=(await all('contracts')).filter(c=>c.id!==o.id&&c.room_id===o.room_id&&o.start_date<=(c.end_date||'9999')&&c.start_date<=(o.end_date||'9999')),
+   pts=[o.start_date,...oth.map(c=>c.start_date).filter(d=>d>o.start_date&&d<=(o.end_date||'9999'))],mx=Math.max(...pts.map(p=>1+oth.filter(c=>c.start_date<=p&&(c.end_date||'9999')>=p).length));
+   if(mx>cap)throw cap>1?`La camera ha ${cap} posti letto: in quel periodo ci sarebbero ${mx} persone`:'La camera è già assegnata in quel periodo'}}
+ if(t=='rooms'){if(Number.isNaN(o.sqm))throw'Metri quadri non validi';if(o.sqm!=null&&o.sqm<=0)throw'I metri quadri devono essere maggiori di zero';
+  const ap=o.apartment_id?await get('apartments',o.apartment_id):null,old=o.id?await get('rooms',o.id):null;
+  if(ap){const oth=(await all('rooms')).filter(r=>r.apartment_id===ap.id&&r.id!==o.id),moved=!old||old.apartment_id!==ap.id;
+   if(moved&&ap.rooms!=null&&oth.length+1>ap.rooms)throw`L’appartamento “${ap.name}” ha ${ap.rooms} camere: ne risultano già censite ${oth.length}`;
+   const bt=sum0(oth.map(r=>r.beds||0))+(o.beds||0);if((moved||(old.beds||0)!==(o.beds||0))&&ap.beds!=null&&bt>ap.beds)throw`I posti letto delle camere (${bt}) supererebbero quelli dell’appartamento “${ap.name}” (${ap.beds})`}}
  if(t=='expenses'&&o.period_to<o.period_from)throw'Periodo di competenza non valido'}
 function split(total,w){const S=sum0(w);if(!S)throw'I valori inseriti non possono essere tutti zero';const raw=w.map(x=>total*x/S),fl=raw.map(Math.floor),rem=total-sum0(fl);
  raw.map((x,i)=>[x-fl[i],i]).sort((a,b)=>b[0]-a[0]).slice(0,rem).forEach(([,i])=>fl[i]++);return fl}
@@ -110,6 +118,14 @@ async function involved(e){const m=new Map();
   const f=c.start_date>e.period_from?c.start_date:e.period_from,t=c.end_date&&c.end_date<e.period_to?c.end_date:e.period_to;
   m.set(c.tenant_id,(m.get(c.tenant_id)||0)+Math.round((new Date(t)-new Date(f))/864e5)+1)}
  const Te=await all('tenants');return[...m].map(([id,days])=>{const t=Te.find(x=>x.id===id);return{id,name:t.first_name+' '+t.last_name,days}})}
+async function mqWeights(e,T){const[C,Ro,Te]=await Promise.all(['contracts','rooms','tenants'].map(all)),Cs=C.filter(c=>c.apartment_id===e.apartment_id&&c.start_date<=e.period_to&&(!c.end_date||c.end_date>=e.period_from)),
+ miss=[...new Set(Cs.filter(c=>{const r=Ro.find(x=>x.id===c.room_id);return!(r&&r.sqm>0)}).map(c=>c.tenant_id))];
+ if(miss.length)throw'Per ripartire per mq serve la camera con i metri quadri nel contratto di: '+miss.map(id=>{const t=Te.find(x=>x.id===id);return t.first_name+' '+t.last_name}).join(', ');
+ const w=new Map(T.map(t=>[t.id,0]));
+ for(let d=e.period_from;d<=e.period_to;d=addD(d,1)){const rm=new Map();
+  for(const c of Cs)if(c.start_date<=d&&(!c.end_date||c.end_date>=d)){if(!rm.has(c.room_id))rm.set(c.room_id,new Set());rm.get(c.room_id).add(c.tenant_id)}
+  for(const[rid,ts]of rm){const q=Ro.find(x=>x.id===rid).sqm/ts.size;for(const tid of ts)w.set(tid,(w.get(tid)||0)+q)}}
+ return T.map(t=>Math.round((w.get(t.id)||0)*1e6)/1e6)}
 async function duesRows(month){const[D,C,Te,Ap,Pa]=await Promise.all(['rent_dues','contracts','tenants','apartments','payments'].map(all));
  return D.filter(d=>!month||d.month.slice(0,7)===month).map(d=>{const c=C.find(x=>x.id===d.contract_id),t=Te.find(x=>x.id===c.tenant_id),paid=sumk(Pa.filter(p=>p.due_id===d.id),'amount'),rem=Math.round((d.amount-paid)*100)/100;
   return{id:d.id,month:d.month,amount:d.amount,tenant:t.first_name+' '+t.last_name,apartment:Ap.find(x=>x.id===c.apartment_id).name,apt:c.apartment_id,paid,remaining:rem,late:rem>0&&d.month.slice(0,8)+String(c.due_day||5).padStart(2,'0')<today()}})
@@ -152,7 +168,7 @@ async function route(p,o){const m=o.method||'GET',b=o.body,[path,qs]=p.split('?'
    const total=Math.round(e.amount*100),val=T.map(t=>Number(values[t.id]||0));let w;
    if(criterion=='uguale')w=T.map(()=>1);else if(criterion=='giorni')w=T.map(t=>t.days);
    else if(criterion=='percentuale'){if(Math.abs(sum0(val)-100)>.001)throw'Le percentuali devono sommare a 100';w=val}
-   else if(criterion=='quota'){if(Math.round(sum0(val)*100)!==total)throw'Le quote devono sommare all\'importo della spesa';w=val}else throw'Criterio non valido';
+   else if(criterion=='quota'){if(Math.round(sum0(val)*100)!==total)throw'Le quote devono sommare all\'importo della spesa';w=val}else if(criterion=='mq')w=await mqWeights(e,T);else throw'Criterio non valido';
    const c=split(total,w);for(const x of(await all('allocations')).filter(x=>x.expense_id===e.id))await rm('allocations',x.id);
    const al=await put('allocations',{expense_id:e.id,criterion,total_cents:total});
    for(let i=0;i<T.length;i++)await put('allocation_shares',{allocation_id:al.id,tenant_id:T[i].id,days:T[i].days,weight:w[i],calc_cents:c[i],final_cents:c[i],modified:false});return{id:al.id}}
@@ -167,7 +183,7 @@ async function route(p,o){const m=o.method||'GET',b=o.body,[path,qs]=p.split('?'
  throw'Operazione non supportata'}
 async function api(p,o={}){try{return await route(p,o)}catch(e){alert(typeof e==='string'?e:'Errore: '+(e?.message||e));throw 0}}
 function doPrint(){$('#pa').innerHTML=$('#pr').innerHTML;print()}
-let curM=thisM();const FAP={expenses:'',dues:'',shares:'',deposits:''},fd=d=>d?d.split('-').reverse().join('/'):'',
+let curM=thisM();const FAP={expenses:'',dues:'',shares:'',deposits:'',rooms:''},fd=d=>d?d.split('-').reverse().join('/'):'',
  addD=(d,n)=>{const x=new Date(d+'T00:00:00Z');x.setUTCDate(x.getUTCDate()+n);return x.toISOString().slice(0,10)};
 function aptSel(AP,v){return`<select id=fa><option value="">Tutti gli appartamenti</option>${AP.map(a=>`<option value=${a.id} ${a.id==v?'selected':''}>${esc(a.name)}</option>`).join('')}</select>`}
 async function roomInfo(m){const[Ro,C,Te]=await Promise.all(['rooms','contracts','tenants'].map(all)),ms=m+'-01',me=new Date(Date.UTC(+m.slice(0,4),+m.slice(5),0)).toISOString().slice(0,10),o={};
@@ -230,7 +246,7 @@ const R={apartments:r=>r.name,tenants:r=>r.first_name+' '+r.last_name,expense_ty
 const A=['apartment_id','Appartamento','ref:apartments'];
 const S={apartments:['Appartamenti',[['name','Nome'],['color','Colore','color'],['address','Indirizzo'],['city','Città'],['rooms','Camere','number'],['beds','Posti letto','number'],['description','Descrizione'],['notes','Note']]],
  tenants:['Inquilini',[['first_name','Nome'],['last_name','Cognome'],['tax_code','Codice fiscale'],['phone','Telefono','tel'],['email','Email','email'],['notes','Note']]],
- rooms:['Camere',[A,['name','Camera'],['beds','Posti letto','number']]],
+ rooms:['Camere',[A,['name','Camera'],['beds','Posti letto','number'],['sqm','Mq','number']]],
  contracts:['Contratti',[['tenant_id','Inquilino','ref:tenants'],A,['room_id','Camera','ref:rooms'],['start_date','Ingresso','date'],['end_date','Uscita','date'],['monthly_rent','Canone €','number'],['deposit','Caparra €','number'],['due_day','Giorno scadenza','number'],['notes','Note']]],
  expenses:['Spese',[A,['type_id','Tipologia','ref:expense_types'],['description','Descrizione'],['amount','Importo €','number'],['spent_on','Scadenza','date'],['period_from','Competenza dal','date'],['period_to','Competenza al','date'],['supplier','Fornitore'],['notes','Note']]]};
 const V={dash:['Dashboard',()=>dash()],charts:['Grafici',()=>charts()],dues:['Canoni',()=>dues()],expenses:[S.expenses[0],()=>list('expenses')],shares:['Incassi spese',()=>sharesView()],report:['Report',()=>report()],deposits:['Caparre',()=>depositsView()],contracts:[S.contracts[0],()=>list('contracts')],apartments:[S.apartments[0],()=>list('apartments')],rooms:[S.rooms[0],()=>list('rooms')],tenants:[S.tenants[0],()=>list('tenants')]};
@@ -253,31 +269,31 @@ async function form(t,F,row={},after){const d=$('#dlg');let h='';
  d.querySelector('form').onsubmit=async e=>{if(e.submitter?.value==='x')return;e.preventDefault();
   try{await api(t+(row.id?'/'+row.id:''),{method:row.id?'PUT':'POST',body:{...row,...Object.fromEntries(new FormData(e.target))}});d.close();after()}catch{}}}
 function filt(){$('#q').oninput=e=>document.querySelectorAll('tr[data-f]').forEach(r=>r.hidden=!r.textContent.toLowerCase().includes(e.target.value.toLowerCase()))}
-async function list(t){let rows;const[ti,F]=S[t],raw=await api(t),ref={},AP=await api('apartments'),fa=FAP[t]||'',RM=t=='rooms'?await roomInfo(curM):{},SD=t=='expenses'?await api('shares_due'):[],CT=t=='tenants'?await api('contracts'):[];
+async function list(t){let rows;const[ti,F]=S[t],raw=await api(t),ref={},AP=await api('apartments'),fa=FAP[t]||'',RM=t=='rooms'?await roomInfo(curM):{},SD=t=='expenses'?await api('shares_due'):[],CT=t=='tenants'?await api('contracts'):[],DC=t=='expenses'?(await all('documents')).reduce((m,d)=>(m[d.expense_id]=(m[d.expense_id]||0)+1,m),{}):{};
  const inc=r=>{const q=SD.filter(s=>s.expense_id===r.id);if(!q.length)return'Non ripartita';const m=sumk(q,'remaining');return m>0.004?(r.spent_on<today()?'In ritardo ':'Da incassare ')+eur(m):'Incassata ✓'};
- rows=raw;if(t=='expenses'){if(fa)rows=rows.filter(r=>r.apartment_id==fa);const rk=r=>{const q=SD.filter(s=>s.expense_id===r.id);return!q.length?1:sumk(q,'remaining')>0.004?0:2};rows=[...rows].sort((a,b)=>rk(a)-rk(b)||b.spent_on.localeCompare(a.spent_on)||b.id-a.id)}
+ rows=raw;if(t=='rooms'&&fa)rows=rows.filter(r=>r.apartment_id==fa);if(t=='expenses'){if(fa)rows=rows.filter(r=>r.apartment_id==fa);const rk=r=>{const q=SD.filter(s=>s.expense_id===r.id);return!q.length?1:sumk(q,'remaining')>0.004?0:2};rows=[...rows].sort((a,b)=>rk(a)-rk(b)||b.spent_on.localeCompare(a.spent_on)||b.id-a.id)}
  const X=t=='expenses'?[['Incasso',r=>{const x=inc(r);return bdg(x,x.startsWith('Incassata'))},1]]:t=='rooms'?[['Stato '+curM,r=>RM[r.id].st],['Periodo',r=>RM[r.id].per]]:t=='tenants'?[['Contratto attivo',r=>{const d=today(),a=CT.some(c=>c.tenant_id===r.id&&c.start_date<=d&&(!c.end_date||c.end_date>=d));return bdg(a?'Sì':'No',a,!a)},1]]:[];
  for(const[,,ty]of F)if(ty?.startsWith('ref:')){const rt=ty.slice(4);ref[rt]=Object.fromEntries((await api(rt)).map(x=>[x.id,R[rt](x)]))}
  const cell=(r,[k,,ty=''])=>ty.startsWith('ref:')?ref[ty.slice(4)][r[k]]??'':r[k]??'',
  cellH=(r,f)=>{const k=f[0];if(k=='apartment_id')return aptTag(ref.apartments?.[r.apartment_id],r.apartment_id);if(k=='tenant_id')return tnTag(ref.tenants?.[r.tenant_id]);if(t=='apartments'&&k=='name')return aptTag(r.name,r.id);if(t=='apartments'&&k=='color')return`<span class=sw style="background:${aptCol(r.id)}"></span>`;if(t=='tenants'&&(k=='first_name'||k=='last_name'))return tnTag(r[k]);return esc(cell(r,f))};
- $('#main').innerHTML=`<h2>${ti}</h2><button id=new>+ Nuovo</button> ${t=='expenses'?aptSel(AP,fa)+' ':''}${t=='rooms'?`${mn('rmm',curM)} `:''}<input id=q placeholder="Cerca…"><div class=sc><table class=rt><tr>${F.map(f=>`<th>${f[1]}`).join('')}${X.map(x=>`<th>${esc(x[0])}`).join('')}<th></tr>${rows.map((r,i)=>`<tr data-f data-i=${i}>${F.map(f=>`<td data-l="${esc(f[1])}">${cellH(r,f)}`).join('')}${X.map(x=>`<td data-l="${esc(x[0])}">${x[2]?x[1](r):esc(x[1](r))}`).join('')}<td class=act><button data-a=e>✎</button><button data-a=d>🗑</button>${t=='expenses'?'<button data-a=r>Ripartisci</button><button data-a=i>Incassi</button><button data-a=f>📎</button>':''}</tr>`).join('')}</table></div>`;
- filt();const again=()=>list(t);if($('#fa'))$('#fa').onchange=e=>{FAP[t]=e.target.value;list(t)};if($('#rmm'))$('#rmm').onchange=e=>{curM=e.target.value||curM;list(t)};$('#new').onclick=()=>form(t,F,{},again);
+ $('#main').innerHTML=`<h2>${ti}</h2><button id=new>+ Nuovo</button> ${t=='expenses'||t=='rooms'?aptSel(AP,fa)+' ':''}${t=='rooms'?`${mn('rmm',curM)} `:''}<input id=q placeholder="Cerca…"><div class=sc><table class=rt><tr>${F.map(f=>`<th>${f[1]}`).join('')}${X.map(x=>`<th>${esc(x[0])}`).join('')}<th></tr>${rows.map((r,i)=>`<tr data-f data-i=${i}>${F.map(f=>`<td data-l="${esc(f[1])}">${cellH(r,f)}`).join('')}${X.map(x=>`<td data-l="${esc(x[0])}">${x[2]?x[1](r):esc(x[1](r))}`).join('')}<td class=act><button data-a=e>✎</button><button data-a=d>🗑</button>${t=='expenses'?`<button data-a=r>Ripartisci</button><button data-a=i>Incassi</button><button data-a=f class="${DC[r.id]?'has':''}" title="Allegati">📎${DC[r.id]?' '+DC[r.id]:''}</button>`:''}</tr>`).join('')}</table></div>`;
+ filt();const again=()=>list(t);if($('#fa'))$('#fa').onchange=e=>{FAP[t]=e.target.value;list(t)};if($('#rmm'))$('#rmm').onchange=e=>{curM=e.target.value||curM;list(t)};$('#new').onclick=()=>form(t,F,t=='rooms'&&fa?{apartment_id:fa}:{},again);
  $('#main').querySelector('table').onclick=async e=>{const a=e.target.dataset.a,tr=e.target.closest('tr[data-i]');if(!a)return;const r=rows[tr.dataset.i];
   if(a=='e')form(t,F,r,again);
   if(a=='d'&&confirm('Eliminare definitivamente questo elemento?'))try{await api(t+'/'+r.id,{method:'DELETE'});again()}catch{}
   if(a=='r')alloc(r);
   if(a=='i')collectDlg(r.id,again);
-  if(a=='f')attach(r)}}
-async function attach(e){const d=$('#dlg'),D=await api(`expenses/${e.id}/docs`);d.onclick=null;
- d.innerHTML=`<div class=fb><h3>Allegati</h3><p class=mut>${esc(e.description||'Spesa')} · ${eur(e.amount)}</p>${D.length?D.map(x=>`<div style="display:flex;gap:8px;align-items:center;justify-content:space-between;margin:6px 0"><span style="overflow-wrap:anywhere">📎 ${esc(x.filename)}</span><button type=button data-od=${x.id}>Apri</button></div>`).join(''):'<p>Nessun allegato.</p>'}
+  if(a=='f')attach(r,again)}}
+async function attach(e,after,msg){const d=$('#dlg'),D=await api(`expenses/${e.id}/docs`);d.onclick=null;d.onclose=()=>{d.onclose=null;after?.()};
+ d.innerHTML=`<div class=fb><h3>Allegati</h3><p class=mut>${esc(e.description||'Spesa')} · ${eur(e.amount)}</p>${msg?`<p class=okm>✓ ${esc(msg)}</p>`:''}${D.length?D.map(x=>`<div style="display:flex;gap:8px;align-items:center;justify-content:space-between;margin:6px 0"><span style="overflow-wrap:anywhere">📎 ${esc(x.filename)}</span><button type=button data-od=${x.id}>Apri</button></div>`).join(''):'<p>Nessun allegato.</p>'}
  <label>Aggiungi allegato (PDF o immagine)<input type=file id=af accept="application/pdf,image/*,.pdf,.heic,.heif"></label></div><div class=ft><button type=button class=sec id=cl2>Chiudi</button></div>`;
  if(!d.open)d.showModal();$('#cl2').onclick=()=>d.close();
- $('#af').onchange=async ev=>{const f=ev.target.files[0];if(!f)return;const fm=new FormData();fm.append('f',f);try{await api(`expenses/${e.id}/doc`,{method:'POST',body:fm});attach(e)}catch{}};
- d.onclick=ev=>{const id=ev.target.dataset.od;if(id)openDoc(+id,()=>attach(e))}}
+ $('#af').onchange=async ev=>{const f=ev.target.files[0];if(!f)return;const fm=new FormData();fm.append('f',f);try{await api(`expenses/${e.id}/doc`,{method:'POST',body:fm});attach(e,after,'Allegato caricato: '+f.name)}catch{}};
+ d.onclick=ev=>{const id=ev.target.dataset.od;if(id)openDoc(+id,()=>attach(e,after))}}
 async function alloc(e){const d=$('#dlg'),T=await api(`expenses/${e.id}/tenants`);d.onclick=null;
- d.innerHTML=`<form method=dialog onsubmit="if(!event.submitter||event.submitter.value!='x')return false"><div class=fb><h3>Ripartizione ${eur(e.amount)}</h3><label>Criterio<select id=cr><option value=uguale>Parti uguali<option value=giorni>Giorni di permanenza<option value=percentuale>Percentuali (%)<option value=quota>Quote (€)</select></label><div id=vals class=g></div><div id=res></div></div>
+ d.innerHTML=`<form method=dialog onsubmit="if(!event.submitter||event.submitter.value!='x')return false"><div class=fb><h3>Ripartizione ${eur(e.amount)}</h3><label>Criterio<select id=cr><option value=uguale>Parti uguali<option value=giorni>Giorni di permanenza<option value=percentuale>Percentuali (%)<option value=quota>Quote (€)<option value=mq>Metri quadri (mq)</select></label><div id=vals class=g></div><div id=res></div></div>
   <div class=ft><button type=button id=go>Calcola</button><button type=button id=sv hidden>Salva modifiche manuali</button><button value=x class=sec>Chiudi</button></div></form>`;d.showModal();
- const cr=$('#cr');cr.onchange=()=>$('#vals').innerHTML=['percentuale','quota'].includes(cr.value)?T.map(t=>`<label>${esc(t.name)} (${t.days} gg)<input type=text inputmode=decimal data-t=${t.id}></label>`).join(''):'';
+ const cr=$('#cr');cr.onchange=()=>$('#vals').innerHTML=cr.value=='mq'?'<p><small>Il peso di ogni inquilino è dato dai mq della sua camera divisi per le persone presenti nella stessa camera, giorno per giorno nel periodo di competenza.</small></p>':['percentuale','quota'].includes(cr.value)?T.map(t=>`<label>${esc(t.name)} (${t.days} gg)<input type=text inputmode=decimal data-t=${t.id}></label>`).join(''):'';
  $('#go').onclick=async()=>{const values={};document.querySelectorAll('#vals input').forEach(i=>values[i.dataset.t]=N(i.value));try{await api(`expenses/${e.id}/allocate`,{method:'POST',body:{criterion:cr.value,values}});shares(e)}catch{}};shares(e)}
 async function shares(e){const a=await api(`expenses/${e.id}/allocation`),sv=$('#sv');if(!a){sv.hidden=true;return}
  $('#res').innerHTML=`<h4>Criterio: ${esc(a.criterion)}</h4><p><small>Modifica una quota: le altre si adeguano da sole per mantenere il totale.</small></p><div class=g>${a.shares.map(s=>`<label>${esc(s.tenant)} <small>${s.days??''} gg${s.modified?' · ✏️ calcolata '+(s.calc_cents/100).toFixed(2):''}</small><input type=text inputmode=decimal data-s=${s.id} data-w=${s.weight||0} value="${(s.final_cents/100).toFixed(2)}"></label>`).join('')}</div><p id=tot></p>`;
