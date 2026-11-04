@@ -32,6 +32,7 @@ tr.late .bdg.no{background:#fff1f2}
 .tn{display:inline-block;font-weight:700;color:#1e3a8a;background:#e0e7ff;padding:0 8px;border-radius:6px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 button.has{background:#16a34a}.okm{color:#15803d;background:#dcfce7;border:1px solid #86efac;border-radius:8px;padding:6px 10px;font-weight:700}
 .sw{display:inline-block;width:22px;height:22px;border-radius:50%;vertical-align:middle;border:1px solid #0003}
+.fl{font-size:13px;color:#6b7280}
 .ver{margin:-6px 0 10px;font-size:13px;color:#6b7280}
 .meta{margin-top:18px;padding-top:10px;border-top:1px solid #d1d5db;font-size:13px;color:#6b7280}.meta div{margin:2px 0}.meta b{color:#374151;font-weight:600}
 .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}.card{background:#fff;padding:12px;border-radius:12px}.card b{display:block;font-size:20px}
@@ -42,7 +43,9 @@ button.has{background:#16a34a}.okm{color:#15803d;background:#dcfce7;border:1px s
  nav{position:fixed;left:0;right:0;bottom:0;top:auto;z-index:20;width:auto;height:auto;flex-direction:row;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;gap:2px;padding:6px 8px calc(6px + env(safe-area-inset-bottom))}
  nav button{flex:0 0 auto;white-space:nowrap;padding:10px 14px}
  main{padding:12px calc(12px + env(safe-area-inset-right)) calc(92px + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left))}
- h2{font-size:22px}#q,#mm,#dm,#cmm,#fa,#rmm,#ra,#rt,#rf,#rto{width:100%;margin:6px 0}.mnav{display:flex}dialog{width:calc(100vw - 16px)}.cards{grid-template-columns:repeat(2,1fr)}.card b{font-size:18px}
+ h2{font-size:22px}#q,#mm,#dm,#cmm,#fa,#rmm,#ra,#rt,#rf,#rto,#cf,#ct{width:100%;margin:6px 0}.fl{display:block}
+ #new{position:fixed;right:calc(14px + env(safe-area-inset-right));bottom:calc(74px + env(safe-area-inset-bottom));z-index:15;margin:0;padding:14px 22px;border-radius:999px;font-size:18px;font-weight:700;min-height:52px;box-shadow:0 4px 14px rgba(0,0,0,.35)}
+ main{padding-bottom:calc(150px + env(safe-area-inset-bottom))}.mnav{display:flex}dialog{width:calc(100vw - 16px)}.cards{grid-template-columns:repeat(2,1fr)}.card b{font-size:18px}
  .sc{overflow:visible}table.rt,table.rt tbody{display:block;background:none}table.rt tbody{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px}table.rt tr:has(th){display:none}
  table.rt tr{display:block;background:#fff;border-radius:12px;padding:8px 12px;box-shadow:0 1px 2px #0002}table.rt tr.late{background:#fee2e2}
  table.rt td{display:flex;justify-content:space-between;gap:12px;border:0;padding:5px 0;white-space:normal;text-align:right;overflow-wrap:anywhere}
@@ -57,7 +60,7 @@ button.has{background:#16a34a}.okm{color:#15803d;background:#dcfce7;border:1px s
 const $=s=>document.querySelector(s),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),
 eur=v=>Number(v).toLocaleString('it-IT',{style:'currency',currency:'EUR'}),thisM=()=>new Date().toISOString().slice(0,7);
 
-const APP_VERSION='1.3.1';
+const APP_VERSION='1.4.0';
 const mn=(id,v)=>`<span class=mnav><button type=button class=sec data-mn="${id}:-1" aria-label="Mese precedente">‹</button><input type=month id=${id} value="${v}"><button type=button class=sec data-mn="${id}:1" aria-label="Mese successivo">›</button></span>`;
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-mn]');if(!b)return;const[id,d]=b.dataset.mn.split(':'),i=document.getElementById(id);if(!i)return;
  const[y,m]=(i.value||thisM()).split('-').map(Number);i.value=new Date(Date.UTC(y,m-1+ +d,1)).toISOString().slice(0,7);i.dispatchEvent(new Event('change',{bubbles:true}))});
@@ -183,7 +186,7 @@ async function route(p,o){const m=o.method||'GET',b=o.body,[path,qs]=p.split('?'
  throw'Operazione non supportata'}
 async function api(p,o={}){try{return await route(p,o)}catch(e){alert(typeof e==='string'?e:'Errore: '+(e?.message||e));throw 0}}
 function doPrint(){$('#pa').innerHTML=$('#pr').innerHTML;print()}
-let curM=thisM();const FAP={expenses:'',dues:'',shares:'',deposits:'',rooms:''},fd=d=>d?d.split('-').reverse().join('/'):'',
+let curM=thisM();const FPER={f:'',t:''},FAP={expenses:'',dues:'',shares:'',deposits:'',rooms:'',contracts:''},fd=d=>d?d.split('-').reverse().join('/'):'',
  addD=(d,n)=>{const x=new Date(d+'T00:00:00Z');x.setUTCDate(x.getUTCDate()+n);return x.toISOString().slice(0,10)};
 function aptSel(AP,v){return`<select id=fa><option value="">Tutti gli appartamenti</option>${AP.map(a=>`<option value=${a.id} ${a.id==v?'selected':''}>${esc(a.name)}</option>`).join('')}</select>`}
 async function roomInfo(m){const[Ro,C,Te]=await Promise.all(['rooms','contracts','tenants'].map(all)),ms=m+'-01',me=new Date(Date.UTC(+m.slice(0,4),+m.slice(5),0)).toISOString().slice(0,10),o={};
@@ -212,6 +215,43 @@ async function importAll(txt){const o=JSON.parse(txt);if(!o.apartments||!o.contr
 function backupUI(){const d=$('#dlg');d.innerHTML=`<h3>Backup dei dati</h3><p>I dati sono salvati solo su questo dispositivo. Esporta un backup e conservalo in File/iCloud.</p><button id=ex>Esporta backup</button><label>Ripristina da file<input type=file id=im accept=".json"></label><button onclick="$('#dlg').close()">Chiudi</button>`;d.showModal();
  $('#ex').onclick=async()=>{const n=new Date(),bl=await exportAll(n.toISOString());await sm('lastExport',n.toISOString());await sm('backupHash',await fingerprint());fileDlg('backup-affitti-'+stamp(n)+'.json',bl,'Backup pronto')};
  $('#im').onchange=async e=>{const f=e.target.files[0];if(f&&confirm('Il ripristino SOSTITUISCE tutti i dati attuali. Continuare?'))try{await importAll(await f.text());alert('Ripristino completato');d.close();dash()}catch{alert('File di backup non valido')}}}
+let LASTREP=null;
+function pdfDoc(blocks,title){const PW=595.28,PH=841.89,M=40,CW=PW-2*M,cv=document.createElement('canvas').getContext('2d'),
+ tw=(x,z,b)=>{cv.font=(b?'bold ':'')+'1000px Arial, Helvetica, sans-serif';return cv.measureText(x).width/1000*z},
+ cp={'€':128,'‘':145,'’':146,'“':147,'”':148,'•':149,'–':150,'—':151,'…':133,'·':183},
+ enc=x=>[...String(x)].map(ch=>{let c=ch.codePointAt(0);if(cp[ch])c=cp[ch];else if(c>255)c=63;return c==40||c==41||c==92?'\\'+ch:c<32?' ':c<127?ch:'\\'+c.toString(8).padStart(3,'0')}).join(''),
+ rgb=h=>{const n=parseInt(h.slice(1),16);return[n>>16,(n>>8)&255,n&255].map(v=>(v/255).toFixed(3)).join(' ')},f=n=>n.toFixed(2),pages=[];let ops,y;
+ const np=()=>{ops=[];pages.push(ops);y=PH-M},
+ txt=(x,yb,t,z,b,c,it)=>ops.push(`BT /F${it?3:b?2:1} ${z} Tf ${rgb(c||'#111827')} rg ${f(x)} ${f(yb)} Td (${enc(t)}) Tj ET`),
+ rr=(x,b,w,h,r,c)=>{const k=.5523*r;ops.push(`${rgb(c)} rg ${f(x+r)} ${f(b)} m ${f(x+w-r)} ${f(b)} l ${f(x+w-r+k)} ${f(b)} ${f(x+w)} ${f(b+r-k)} ${f(x+w)} ${f(b+r)} c ${f(x+w)} ${f(b+h-r)} l ${f(x+w)} ${f(b+h-r+k)} ${f(x+w-r+k)} ${f(b+h)} ${f(x+w-r)} ${f(b+h)} c ${f(x+r)} ${f(b+h)} l ${f(x+r-k)} ${f(b+h)} ${f(x)} ${f(b+h-r+k)} ${f(x)} ${f(b+h-r)} c ${f(x)} ${f(b+r)} l ${f(x)} ${f(b+r-k)} ${f(x+r-k)} ${f(b)} ${f(x+r)} ${f(b)} c f`)},
+ hl=(yy,c)=>ops.push(`${rgb(c)} RG .5 w ${f(M)} ${f(yy)} m ${f(M+CW)} ${f(yy)} l S`),
+ wrap=(x,z,b,mw)=>{const out=[];let cur='';for(const w of String(x).split(/\s+/).filter(Boolean)){const t=cur?cur+' '+w:w;if(cur&&tw(t,z,b)>mw){out.push(cur);cur=w}else cur=t}if(cur||!out.length)out.push(cur);return out},
+ pill=(x,yb,t,z,tag,col)=>{const w=tw(t,z,1)+8;rr(x,yb-3,w,z+5,3,tag=='apt'?col:'#e0e7ff');txt(x+4,yb,t,z,1,tag=='apt'?fgc(col):'#1e3a8a');return w},
+ table=b=>{const z=9,lh=14,px=4,py=4,tot=b.cols.reduce((a,c)=>a+c.w,0),ws=b.cols.map(c=>c.w/tot*CW),xs=ws.map((_,i)=>M+ws.slice(0,i).reduce((a,v)=>a+v,0));
+  const row=(cells,head)=>{const L=cells.map((c,i)=>{const t=typeof c=='object'?c:{text:c};return{t,ls:wrap(t.text??'',z,head||!!t.tag,ws[i]-2*px-(t.tag?8:0))}}),n=Math.max(1,...L.map(l=>l.ls.length)),h=n*lh+2*py;
+   if(y-h<M+16){np();if(!head)row(b.cols.map(c=>c.h),1)}
+   if(head)ops.push(`${rgb('#f1f5f9')} rg ${f(M)} ${f(y-h)} ${f(CW)} ${f(h)} re f`);
+   L.forEach((l,i)=>l.ls.forEach((x,k)=>{const yb=y-py-z-k*lh+1,bold=head||!!l.t.tag,w=tw(x,z,bold)+(l.t.tag?8:0),xx=b.cols[i].a=='r'&&!l.t.tag?xs[i]+ws[i]-px-w:xs[i]+px;
+    if(l.t.tag)pill(xx,yb,x,z,l.t.tag,l.t.color);else txt(xx,yb,x,z,head,head?'#374151':'#111827')}));
+   hl(y-h,head?'#9ca3af':'#e5e7eb');y-=h};
+  row(b.cols.map(c=>c.h),1);b.rows.forEach(r=>row(r));if(!b.rows.length){txt(M+4,y-14,'Nessun dato nel periodo selezionato.',9,0,'#6b7280',1);y-=22}y-=8};
+ np();
+ for(const b of blocks){
+  if(b.t=='h1'){if(y<M+60)np();txt(M,y-16,b.text,16,1);y-=28}
+  else if(b.t=='h3'){if(y<M+90)np();y-=8;txt(M,y-12,b.text,12,1,'#1e3a8a');y-=22}
+  else if(b.t=='line'){if(y<M+40)np();let x=M;for(const r of b.runs){if(r.tag)x+=pill(x,y-11,r.text,10,r.tag,r.color);else{txt(x,y-11,r.text,10,r.bold);x+=tw(r.text,10,r.bold)}}y-=19}
+  else if(b.t=='p'){for(const l of wrap(b.text,10,b.bold,CW)){if(y<M+30)np();txt(M,y-11,l,10,b.bold,b.it?'#4b5563':'#111827',b.it);y-=15}y-=4}
+  else if(b.t=='table')table(b)}
+ const N=pages.length;pages.forEach((o,i)=>{const t='Pagina '+(i+1)+' di '+N;ops=o;txt((PW-tw(t,8))/2,M/2,t,8,0,'#6b7280')});
+ const objs=[],A=x=>objs.push(x);
+ A('<< /Type /Catalog /Pages 2 0 R >>');A(`<< /Type /Pages /Kids [${pages.map((_,i)=>(6+2*i)+' 0 R').join(' ')}] /Count ${N} >>`);
+ for(const n of['Helvetica','Helvetica-Bold','Helvetica-Oblique'])A(`<< /Type /Font /Subtype /Type1 /BaseFont /${n} /Encoding /WinAnsiEncoding >>`);
+ pages.forEach((o,i)=>{A(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PW} ${PH}] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents ${7+2*i} 0 R >>`);const c=o.join('\n');A(`<< /Length ${c.length} >>\nstream\n${c}\nendstream`)});
+ A(`<< /Title (${enc(title)}) /Producer (Affitti Studenti) >>`);
+ let out='%PDF-1.4\n';const off=[];objs.forEach((x,i)=>{off.push(out.length);out+=`${i+1} 0 obj\n${x}\nendobj\n`});
+ const xr=out.length;out+=`xref\n0 ${objs.length+1}\n0000000000 65535 f \n`+off.map(o=>String(o).padStart(10,'0')+' 00000 n \n').join('')+`trailer\n<< /Size ${objs.length+1} /Root 1 0 R /Info ${objs.length} 0 R >>\nstartxref\n${xr}\n%%EOF`;
+ return new Blob([out],{type:'application/pdf'})}
+function savePdf(){const R=LASTREP;fileDlg(R.name,pdfDoc(R.blocks,R.title),'Report PDF',()=>localReport('pdf',R.p))}
 async function localReport(kind,p){try{if(!p.spese&&!p.canoni)throw'Seleziona almeno una voce: Spese e/o Canoni';
  const[Ap,te,Co]=await Promise.all(['apartments','tenants','contracts'].map(all)),ap=p.apartment?Ap.find(a=>a.id==p.apartment):null;if(p.apartment&&!ap)throw'Appartamento non trovato';
  const an=id=>Ap.find(a=>a.id===id)?.name||'',atg=n=>aptTag(n,Ap.find(x=>x.name===n)?.id),tn=id=>{const t=te.find(x=>x.id===id);return t?t.first_name+' '+t.last_name:''},cmp=(x,y)=>String(x).localeCompare(String(y),'it'),f2=c=>(c/100).toFixed(2),both=p.spese&&p.canoni,
@@ -239,7 +279,17 @@ async function localReport(kind,p){try{if(!p.spese&&!p.canoni)throw'Seleziona al
   <h3>Quote per inquilino</h3><p>Criterio: ${esc([...new Set(sh.map(x=>x.criterion))].join(', ')||'nessuna ripartizione registrata')}</p><table><tr>${ah}<th>Inquilino<th>Quota<th>Incassato<th>Da incassare</tr>${Object.values(by).sort((x,y)=>cmp(x.apt,y.apt)||cmp(x.tenant,y.tenant)).map(v=>`<tr>${ac(v.apt)}<td>${tnTag(v.tenant)}<td>${eur(v.q/100)}<td>${eur(v.p/100)}<td>${eur((v.q-v.p)/100)}</tr>`).join('')}</table>
   ${ex.some(e=>!als.find(x=>x.expense_id===e.id))?'<p><i>Attenzione: alcune spese non sono ancora ripartite.</i></p>':''}${sh.some(x=>x.modified)?'<p><i>Alcune quote sono state modificate manualmente.</i></p>':''}`:'',
  cnB=p.canoni?`<h3>Canoni di locazione</h3>${cn.length?`<table><tr>${ah}<th>Inquilino<th>Mese<th>Dovuto<th>Pagato<th>Residuo</tr>${cn.map(c=>`<tr>${ac(c.apt)}<td>${tnTag(c.tenant)}<td>${c.month}<td>${eur(c.due/100)}<td>${eur(c.paid/100)}<td>${eur((c.due-c.paid)/100)}</tr>`).join('')}</table><p><b>Totale dovuto: ${eur(cd/100)} · Pagato: ${eur(cp/100)} · Residuo: ${eur((cd-cp)/100)}</b></p>`:'<p><i>Nessun canone nel periodo selezionato.</i></p>'}`:'';
- $('#dlg').innerHTML=`<div class=fb><div id=pr><h2>${title}</h2><p>${ap?`${aptTag(ap.name,ap.id)} — ${esc(ap.address)}, ${esc(ap.city)}`:'<b>Tutti gli appartamenti</b>'}${p.tenant?'<br>Inquilino: '+tnTag(tn(+p.tenant)):''}<br>Periodo: ${p.from} / ${p.to}</p>${spB}${cnB}</div></div><div class=ft><button onclick="doPrint()">Stampa / Salva PDF</button><button class=sec onclick="$('#dlg').close()">Chiudi</button></div>`;$('#dlg').showModal()}
+ const acol=n=>aptCol(Ap.find(x=>x.name===n)?.id),AC=ap?[]:[{h:'Appartamento',w:2}],ACr=(n)=>ap?[]:[{tag:'apt',text:n,color:acol(n)}],R=[{t:'h1',text:title},
+  {t:'line',runs:ap?[{tag:'apt',text:ap.name,color:aptCol(ap.id)},{text:' — '+ap.address+', '+ap.city}]:[{text:'Tutti gli appartamenti',bold:1}]}];
+ if(p.tenant)R.push({t:'line',runs:[{text:'Inquilino: '},{tag:'tn',text:tn(+p.tenant)}]});R.push({t:'line',runs:[{text:'Periodo: '+p.from+' / '+p.to}]});
+ if(p.spese){R.push({t:'h3',text:'Spese sostenute'},{t:'table',cols:[...AC,{h:'Scadenza',w:1.5},{h:'Tipo',w:1.4},{h:'Descrizione',w:3.8},{h:'Importo',w:1.5,a:'r'},{h:'Competenza',w:2.5}],rows:ex.map(e=>[...ACr(e.apt),e.spent_on,e.type,e.description,eur(e.amount),e.period_from+' / '+e.period_to])},{t:'p',bold:1,text:'Totale spese: '+eur(tot/100)},
+  {t:'h3',text:'Quote per inquilino'},{t:'p',text:'Criterio: '+([...new Set(sh.map(x=>x.criterion))].join(', ')||'nessuna ripartizione registrata')},
+  {t:'table',cols:[...AC,{h:'Inquilino',w:2.4},{h:'Quota',w:1.5,a:'r'},{h:'Incassato',w:1.5,a:'r'},{h:'Da incassare',w:1.6,a:'r'}],rows:Object.values(by).sort((x,y)=>cmp(x.apt,y.apt)||cmp(x.tenant,y.tenant)).map(v=>[...ACr(v.apt),{tag:'tn',text:v.tenant},eur(v.q/100),eur(v.p/100),eur((v.q-v.p)/100)])});
+  if(ex.some(e=>!als.find(x=>x.expense_id===e.id)))R.push({t:'p',it:1,text:'Attenzione: alcune spese non sono ancora ripartite.'});if(sh.some(x=>x.modified))R.push({t:'p',it:1,text:'Alcune quote sono state modificate manualmente.'})}
+ if(p.canoni){R.push({t:'h3',text:'Canoni di locazione'},{t:'table',cols:[...AC,{h:'Inquilino',w:2.4},{h:'Mese',w:1.2},{h:'Dovuto',w:1.4,a:'r'},{h:'Pagato',w:1.4,a:'r'},{h:'Residuo',w:1.4,a:'r'}],rows:cn.map(c=>[...ACr(c.apt),{tag:'tn',text:c.tenant},c.month,eur(c.due/100),eur(c.paid/100),eur((c.due-c.paid)/100)])});
+  if(cn.length)R.push({t:'p',bold:1,text:'Totale dovuto: '+eur(cd/100)+' · Pagato: '+eur(cp/100)+' · Residuo: '+eur((cd-cp)/100)})}
+ LASTREP={blocks:R,title,p,name:'report-'+(p.spese?'spese':'')+(both?'-':'')+(p.canoni?'canoni':'')+'.pdf'};
+ $('#dlg').innerHTML=`<div class=fb><div id=pr><h2>${title}</h2><p>${ap?`${aptTag(ap.name,ap.id)} — ${esc(ap.address)}, ${esc(ap.city)}`:'<b>Tutti gli appartamenti</b>'}${p.tenant?'<br>Inquilino: '+tnTag(tn(+p.tenant)):''}<br>Periodo: ${p.from} / ${p.to}</p>${spB}${cnB}</div></div><div class=ft><button onclick="savePdf()">Salva PDF</button><button class=sec onclick="doPrint()">Stampa</button><button class=sec onclick="$('#dlg').close()">Chiudi</button></div>`;$('#dlg').showModal()}
  catch(e){alert(typeof e==='string'?e:'Errore: '+(e?.message||e))}}
 
 const R={apartments:r=>r.name,tenants:r=>r.first_name+' '+r.last_name,expense_types:r=>r.name,rooms:r=>r.name};
@@ -271,13 +321,13 @@ async function form(t,F,row={},after){const d=$('#dlg');let h='';
 function filt(){$('#q').oninput=e=>document.querySelectorAll('tr[data-f]').forEach(r=>r.hidden=!r.textContent.toLowerCase().includes(e.target.value.toLowerCase()))}
 async function list(t){let rows;const[ti,F]=S[t],raw=await api(t),ref={},AP=await api('apartments'),fa=FAP[t]||'',RM=t=='rooms'?await roomInfo(curM):{},SD=t=='expenses'?await api('shares_due'):[],CT=t=='tenants'?await api('contracts'):[],DC=t=='expenses'?(await all('documents')).reduce((m,d)=>(m[d.expense_id]=(m[d.expense_id]||0)+1,m),{}):{};
  const inc=r=>{const q=SD.filter(s=>s.expense_id===r.id);if(!q.length)return'Non ripartita';const m=sumk(q,'remaining');return m>0.004?(r.spent_on<today()?'In ritardo ':'Da incassare ')+eur(m):'Incassata ✓'};
- rows=raw;if(t=='rooms'&&fa)rows=rows.filter(r=>r.apartment_id==fa);if(t=='expenses'){if(fa)rows=rows.filter(r=>r.apartment_id==fa);const rk=r=>{const q=SD.filter(s=>s.expense_id===r.id);return!q.length?1:sumk(q,'remaining')>0.004?0:2};rows=[...rows].sort((a,b)=>rk(a)-rk(b)||b.spent_on.localeCompare(a.spent_on)||b.id-a.id)}
+ rows=raw;if(t=='rooms'&&fa)rows=rows.filter(r=>r.apartment_id==fa);if(t=='contracts'){if(fa)rows=rows.filter(r=>r.apartment_id==fa);if(FPER.f)rows=rows.filter(r=>!r.end_date||r.end_date>=FPER.f);if(FPER.t)rows=rows.filter(r=>r.start_date<=FPER.t)}if(t=='expenses'){if(fa)rows=rows.filter(r=>r.apartment_id==fa);const rk=r=>{const q=SD.filter(s=>s.expense_id===r.id);return!q.length?1:sumk(q,'remaining')>0.004?0:2};rows=[...rows].sort((a,b)=>rk(a)-rk(b)||b.spent_on.localeCompare(a.spent_on)||b.id-a.id)}
  const X=t=='expenses'?[['Incasso',r=>{const x=inc(r);return bdg(x,x.startsWith('Incassata'))},1]]:t=='rooms'?[['Stato '+curM,r=>RM[r.id].st],['Periodo',r=>RM[r.id].per]]:t=='tenants'?[['Contratto attivo',r=>{const d=today(),a=CT.some(c=>c.tenant_id===r.id&&c.start_date<=d&&(!c.end_date||c.end_date>=d));return bdg(a?'Sì':'No',a,!a)},1]]:[];
  for(const[,,ty]of F)if(ty?.startsWith('ref:')){const rt=ty.slice(4);ref[rt]=Object.fromEntries((await api(rt)).map(x=>[x.id,R[rt](x)]))}
  const cell=(r,[k,,ty=''])=>ty.startsWith('ref:')?ref[ty.slice(4)][r[k]]??'':r[k]??'',
  cellH=(r,f)=>{const k=f[0];if(k=='apartment_id')return aptTag(ref.apartments?.[r.apartment_id],r.apartment_id);if(k=='tenant_id')return tnTag(ref.tenants?.[r.tenant_id]);if(t=='apartments'&&k=='name')return aptTag(r.name,r.id);if(t=='apartments'&&k=='color')return`<span class=sw style="background:${aptCol(r.id)}"></span>`;if(t=='tenants'&&(k=='first_name'||k=='last_name'))return tnTag(r[k]);return esc(cell(r,f))};
- $('#main').innerHTML=`<h2>${ti}</h2><button id=new>+ Nuovo</button> ${t=='expenses'||t=='rooms'?aptSel(AP,fa)+' ':''}${t=='rooms'?`${mn('rmm',curM)} `:''}<input id=q placeholder="Cerca…"><div class=sc><table class=rt><tr>${F.map(f=>`<th>${f[1]}`).join('')}${X.map(x=>`<th>${esc(x[0])}`).join('')}<th></tr>${rows.map((r,i)=>`<tr data-f data-i=${i}>${F.map(f=>`<td data-l="${esc(f[1])}">${cellH(r,f)}`).join('')}${X.map(x=>`<td data-l="${esc(x[0])}">${x[2]?x[1](r):esc(x[1](r))}`).join('')}<td class=act><button data-a=e>✎</button><button data-a=d>🗑</button>${t=='expenses'?`<button data-a=r>Ripartisci</button><button data-a=i>Incassi</button><button data-a=f class="${DC[r.id]?'has':''}" title="Allegati">📎${DC[r.id]?' '+DC[r.id]:''}</button>`:''}</tr>`).join('')}</table></div>`;
- filt();const again=()=>list(t);if($('#fa'))$('#fa').onchange=e=>{FAP[t]=e.target.value;list(t)};if($('#rmm'))$('#rmm').onchange=e=>{curM=e.target.value||curM;list(t)};$('#new').onclick=()=>form(t,F,t=='rooms'&&fa?{apartment_id:fa}:{},again);
+ $('#main').innerHTML=`<h2>${ti}</h2><button id=new>+ Nuovo</button> ${t=='expenses'||t=='rooms'||t=='contracts'?aptSel(AP,fa)+' ':''}${t=='contracts'?`<span class=fl>Attivi dal</span> <input type=date id=cf value="${FPER.f}"> <span class=fl>al</span> <input type=date id=ct value="${FPER.t}"> ${FPER.f||FPER.t?'<button type=button class=sec id=cclr>Azzera periodo</button> ':''}`:''}${t=='rooms'?`${mn('rmm',curM)} `:''}<input id=q placeholder="Cerca…"><div class=sc><table class=rt><tr>${F.map(f=>`<th>${f[1]}`).join('')}${X.map(x=>`<th>${esc(x[0])}`).join('')}<th></tr>${rows.map((r,i)=>`<tr data-f data-i=${i}>${F.map(f=>`<td data-l="${esc(f[1])}">${cellH(r,f)}`).join('')}${X.map(x=>`<td data-l="${esc(x[0])}">${x[2]?x[1](r):esc(x[1](r))}`).join('')}<td class=act><button data-a=e>✎</button><button data-a=d>🗑</button>${t=='expenses'?`<button data-a=r>Ripartisci</button><button data-a=i>Incassi</button><button data-a=f class="${DC[r.id]?'has':''}" title="Allegati">📎${DC[r.id]?' '+DC[r.id]:''}</button>`:''}</tr>`).join('')}</table></div>`;
+ filt();const again=()=>list(t);if($('#fa'))$('#fa').onchange=e=>{FAP[t]=e.target.value;list(t)};if($('#rmm'))$('#rmm').onchange=e=>{curM=e.target.value||curM;list(t)};if($('#cf'))$('#cf').onchange=$('#ct').onchange=()=>{FPER.f=$('#cf').value;FPER.t=$('#ct').value;list(t)};if($('#cclr'))$('#cclr').onclick=()=>{FPER.f=FPER.t='';list(t)};$('#new').onclick=()=>form(t,F,t=='rooms'&&fa?{apartment_id:fa}:{},again);
  $('#main').querySelector('table').onclick=async e=>{const a=e.target.dataset.a,tr=e.target.closest('tr[data-i]');if(!a)return;const r=rows[tr.dataset.i];
   if(a=='e')form(t,F,r,again);
   if(a=='d'&&confirm('Eliminare definitivamente questo elemento?'))try{await api(t+'/'+r.id,{method:'DELETE'});again()}catch{}
