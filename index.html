@@ -30,7 +30,7 @@ tr.late .bdg.no{background:#fff1f2}
 .mut{color:#6b7280}
 .at{display:inline-block;font-weight:700;padding:2px 10px;border-radius:8px;border:1px solid rgba(0,0,0,.2);-webkit-print-color-adjust:exact;print-color-adjust:exact}
 .tn{display:inline-block;font-weight:700;color:#1e3a8a;background:#e0e7ff;padding:0 8px;border-radius:6px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-button.has{background:#16a34a}.okm{color:#15803d;background:#dcfce7;border:1px solid #86efac;border-radius:8px;padding:6px 10px;font-weight:700}
+button.has{background:#16a34a}button.wa{background:#15803d}.okm{color:#15803d;background:#dcfce7;border:1px solid #86efac;border-radius:8px;padding:6px 10px;font-weight:700}
 .sw{display:inline-block;width:22px;height:22px;border-radius:50%;vertical-align:middle;border:1px solid #0003}
 .fl{font-size:13px;color:#6b7280}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}.two>div{display:flex;flex-direction:column;gap:10px;min-width:0}.colh{margin:0;font-size:14px;color:#1e3a8a}
@@ -66,7 +66,7 @@ label.cam{display:inline-block;background:#1d4ed8;color:#fff;padding:12px 16px;b
 const $=s=>document.querySelector(s),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),
 eur=v=>Number(v).toLocaleString('it-IT',{style:'currency',currency:'EUR'}),thisM=()=>new Date().toISOString().slice(0,7);
 
-const APP_VERSION='1.8.0';
+const APP_VERSION='1.9.0';
 const mn=(id,v)=>`<span class=mnav><button type=button class=sec data-mn="${id}:-1" aria-label="Mese precedente">‹</button><input type=month id=${id} value="${v}"><button type=button class=sec data-mn="${id}:1" aria-label="Mese successivo">›</button></span>`;
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-mn]');if(!b)return;const[id,d]=b.dataset.mn.split(':'),i=document.getElementById(id);if(!i)return;
  const[y,m]=(i.value||thisM()).split('-').map(Number);i.value=new Date(Date.UTC(y,m-1+ +d,1)).toISOString().slice(0,7);i.dispatchEvent(new Event('change',{bubbles:true}))});
@@ -107,7 +107,7 @@ async function fingerprint(){const ser=v=>v&&typeof v=='object'?(v instanceof Bl
 async function needBackup(lm,ref){const bh=await gm('backupHash');if(bh)return bh!==await fingerprint();if(ref)return!!lm&&lm>ref;for(const t of TABLES)if(t!='expense_types'&&(await all(t)).length)return true;return false}
 async function lastExp(){const v=await gm('lastExport');if(v)return v;try{return+localStorage.lastBackup?new Date(+localStorage.lastBackup).toISOString():null}catch{return null}}
 async function rm(t,id){if(t=='deposit_moves'){const m=await get(t,id);if(m&&m.kind=='versamento'){const dr=(await depositRows()).find(d=>d.id===m.contract_id);if(dr&&dr.held-m.amount<-.005)throw'Impossibile eliminare: la caparra è già stata restituita (elimina prima la restituzione)'}}
- if(t=='contracts'&&(await all('deposit_moves')).some(m=>m.contract_id===id))throw'Il contratto ha movimenti di caparra registrati: eliminali prima (menu Caparre)';if(t=='allocations'){const ss=(await all('allocation_shares')).filter(s=>s.allocation_id===id).map(s=>s.id);if((await all('share_payments')).some(p=>ss.includes(p.share_id)))throw'Ci sono incassi registrati su questa ripartizione: eliminali prima (menu Incassi spese)'}if(t=='contracts'){const ds=(await all('rent_dues')).filter(d=>d.contract_id===id).map(d=>d.id);if((await all('payments')).some(p=>ds.includes(p.due_id)))throw'Il contratto ha pagamenti registrati: per conservare lo storico imposta la data di uscita invece di eliminarlo'}for(const[c,k]of FK[t]||[])if((await all(c)).some(x=>x[k]===id))throw'Impossibile eliminare: ci sono dati collegati (storico da conservare)';
+ if(t=='contracts'&&(await all('deposit_moves')).some(m=>m.contract_id===id))throw'Il contratto ha movimenti di caparra registrati: eliminali prima (menu Caparre)';if(t=='allocations'){const ss=(await all('allocation_shares')).filter(s=>s.allocation_id===id).map(s=>s.id);if((await all('share_payments')).some(p=>ss.includes(p.share_id)))throw'Ci sono incassi registrati su questa ripartizione: eliminali prima (pulsante Incassi nel menù Spese)'}if(t=='contracts'){const ds=(await all('rent_dues')).filter(d=>d.contract_id===id).map(d=>d.id);if((await all('payments')).some(p=>ds.includes(p.due_id)))throw'Il contratto ha pagamenti registrati: per conservare lo storico imposta la data di uscita invece di eliminarlo'}for(const[c,k]of FK[t]||[])if((await all(c)).some(x=>x[k]===id))throw'Impossibile eliminare: ci sono dati collegati (storico da conservare)';
  for(const[c,k]of CAS[t]||[])for(const x of await all(c))if(x[k]===id)await rm(c,x.id);const old=await get(t,id);if(old&&old.gid&&old.rv!=null)await sm('tomb',[...((await gm('tomb'))||[]),{t,gid:old.gid,dt:Date.now()}]);await P(DB.transaction(t,'readwrite').objectStore(t).delete(id));await touch();if(t=='apartments')await loadApc()}
 function norm(t,b){const o={};for(const k of COLS[t].split(',')){let v=b[k];if(v===''||v===undefined)v=null;else if(k.endsWith('_id')||NUM.includes(k))v=Number(String(v).replace(',','.'));o[k]=v}if(b.id)o.id=Number(b.id);return o}
 async function check(t,o){if(t=='deposit_moves'){if(!['versamento','restituzione'].includes(o.kind))throw'Tipo di movimento non valido';const dr=(await depositRows()).find(d=>d.id===o.contract_id);
@@ -237,7 +237,7 @@ const ce=(kind,msg)=>Object.assign(new Error(msg),{kind}),
  getSession=async()=>(await gm('session'))||null,
  hasData=async()=>{for(const t of TABLES)if(t!='expense_types'&&(await all(t)).length)return true;return false},
  rawPut=(t,o)=>P(DB.transaction(t,'readwrite').objectStore(t).put(o)),rawDel=(t,id)=>P(DB.transaction(t,'readwrite').objectStore(t).delete(id));
-async function authToken(){let s=await getSession();if(!s)throw ce('login','Accedi dal menù Cloud');if(s.exp-60>Date.now()/1000)return s;
+async function authToken(){let s=await getSession();if(!s)throw ce('login','Accedi dal menù Impostazioni');if(s.exp-60>Date.now()/1000)return s;
  const r=await sb('/auth/v1/token?grant_type=refresh_token',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({refresh_token:s.rt})});
  if(!r.ok){if(r.status>=400&&r.status<500){await sm('session',null);throw ce('login','Sessione scaduta: accedi di nuovo')}throw await httpErr(r)}
  s=mkSess(await r.json());await sm('session',s);return s}
@@ -308,24 +308,81 @@ async function syncNow(manual){if(SYNC.busy){SYNC.again=1;return}if(!(await getS
   if(SYNC.again){SYNC.again=0;schedSync(800)}}}
 function schedSync(ms=4000){clearTimeout(SYNC.timer);SYNC.timer=setTimeout(()=>syncNow().catch(()=>{}),ms)}
 addEventListener('online',()=>schedSync(500));document.addEventListener('visibilitychange',()=>{if(!document.hidden)schedSync(500)});
-async function cloudLine(){const s=await getSession();if(!s)return'non attivo (accedi dal menù Cloud)';const at=await gm('syncAt'),pend=await pendingCount();
- if(SYNC.state=='conflict')return'⚠ da decidere: dati diversi su questo dispositivo e nel cloud (menù Cloud)';if(SYNC.state=='login')return'sessione scaduta: accedi di nuovo (menù Cloud)';
+async function cloudLine(){const s=await getSession();if(!s)return'non attivo (accedi dal menù Impostazioni)';const at=await gm('syncAt'),pend=await pendingCount();
+ if(SYNC.state=='conflict')return'⚠ da decidere: dati diversi su questo dispositivo e nel cloud (menù Impostazioni)';if(SYNC.state=='login')return'sessione scaduta: accedi di nuovo (menù Impostazioni)';
  if(SYNC.state=='syncing')return'sincronizzazione in corso…';const last=at?'ultimo controllo '+fdt(at):'mai sincronizzato';
  if(SYNC.state=='offline'&&SYNC.msg&&SYNC.msg!='Nessuna connessione')return'cloud non raggiungibile ('+last+')';if(SYNC.state=='error')return'errore: '+SYNC.msg+' · '+last;
  if(pend)return(navigator.onLine&&SYNC.state!='offline'?'modifiche in attesa di invio':'offline · modifiche in attesa di invio')+' ('+pend+', '+last+')';return at?'✓ aggiornato · '+last:'in attesa della prima sincronizzazione'}
 async function doExport(){const n=new Date(),bl=await exportAll(n.toISOString());await sm('lastExport',n.toISOString());await sm('backupHash',await fingerprint());fileDlg('backup-affitti-'+stamp(n)+'.json',bl,'Backup pronto')}
 async function cloudView(msg){const s=await getSession(),cl=await cloudLine(),bad=SYNC.msg&&!['ok','syncing','off'].includes(SYNC.state)&&SYNC.msg!='Nessuna connessione';
- $('#main').innerHTML=`<h2>Cloud</h2>`+(s?`<div class=card><p>Collegato come <strong>${esc(s.email)}</strong></p><p>Stato: <strong id=cloudline>${esc(cl)}</strong></p>${SYNC.info?`<p class=mut>Ultima sincronizzazione: ${esc(SYNC.info)}</p>`:''}${bad?`<p class=okm style="background:#fee2e2;color:#b91c1c;border-color:#fca5a5">${esc(SYNC.msg)}</p>`:''}${msg?`<p class=okm>${esc(msg)}</p>`:''}
+ $('#main').innerHTML=`<h2>Impostazioni</h2><h3>Account e sincronizzazione</h3>`+(s?`<div class=card><p>Collegato come <strong>${esc(s.email)}</strong></p><p>Stato: <strong id=cloudline>${esc(cl)}</strong></p>${SYNC.info?`<p class=mut>Ultima sincronizzazione: ${esc(SYNC.info)}</p>`:''}${bad?`<p class=okm style="background:#fee2e2;color:#b91c1c;border-color:#fca5a5">${esc(SYNC.msg)}</p>`:''}${msg?`<p class=okm>${esc(msg)}</p>`:''}
   <button type=button id=csync>Sincronizza ora</button> <button type=button class=sec id=cout>Esci</button>${SYNC.state=='conflict'?' <button type=button id=cres>Risolvi ora</button>':''}
   <details style="margin-top:12px"><summary><strong>Avanzate</strong></summary><p class=mut>Usa questi comandi solo se sai cosa stai facendo: sostituiscono i dati di una delle due parti.</p><button type=button class=sec id=cpush>Invia questo dispositivo al cloud</button> <button type=button class=sec id=cpull>Scarica dal cloud su questo dispositivo</button></details></div>`
   :`<div class=card><p>Accedi per tenere i dati allineati tra iPhone, iPad e computer. L’app funziona anche senza connessione e sincronizza quando torna la rete.</p><label>Email<input id=ce type=email autocomplete=username autocapitalize=off></label><label>Password<input id=cp type=password autocomplete=current-password></label><button type=button id=cin>Accedi</button>${msg?`<p class=okm style="background:#fee2e2;color:#b91c1c;border-color:#fca5a5">${esc(msg)}</p>`:''}</div>`)
-  +`<p class=mut>Il cloud non sostituisce il backup: continua a esportare ogni tanto un file di backup (pulsante Backup).</p>`;
+  +`<p class=mut>Il cloud non sostituisce il backup: continua a esportare ogni tanto un file di backup (pulsante Backup).</p><div id=wa></div>`;
  const go=async f=>{try{await f()}catch(e){cloudView(e.message||String(e))}};
  if(!s){$('#cin').onclick=()=>go(async()=>{await cloudLogin($('#ce').value.trim(),$('#cp').value);SYNC.state='syncing';await cloudView();await syncNow(true)});$('#cp').onkeydown=e=>{if(e.key=='Enter')$('#cin').click()}}
  else{$('#csync').onclick=async()=>{await syncNow(true)};$('#cout').onclick=async()=>{if(confirm('Uscire dal cloud? I dati restano su questo dispositivo.')){await sm('session',null);SYNC.state='off';SYNC.msg='';cloudView()}};
   if($('#cres'))$('#cres').onclick=()=>syncNow(true);
   $('#cpush').onclick=()=>go(async()=>{if(!confirm('Sostituire i dati nel cloud con quelli di questo dispositivo?'))return;await sm('forceMode','local');await syncNow(true)});
-  $('#cpull').onclick=()=>go(async()=>{if(!confirm('Sostituire i dati di questo dispositivo con quelli del cloud?'))return;await sm('forceMode','cloud');await syncNow(true)})}}
+  $('#cpull').onclick=()=>go(async()=>{if(!confirm('Sostituire i dati di questo dispositivo con quelli del cloud?'))return;await sm('forceMode','cloud');await syncNow(true)})}
+ waSettings(s)}
+
+/* ===== WhatsApp (Twilio) via funzione Supabase: impostazioni, credenziali write-only, invio ===== */
+const WA_DEF={enabled:false,from:'',prefix:'+39',mode:'free',contentSid:'',contentVars:'{"1":"{{nome}}","2":"{{periodo}}"}',text:'Ciao {{nome}}, ti invio il resoconto {{periodo}}{{appartamento}}. Grazie!',confirm:true};
+const WA_KEYS=[['twilio_account_sid','Account SID (inizia con AC…)'],['twilio_key_sid','API Key SID (inizia con SK…)'],['twilio_key_secret','API Key Secret']];
+function normPhone(raw,prefix){let t=String(raw||'').trim().replace(/[\s().\-\/]/g,'');if(t.startsWith('00'))t='+'+t.slice(2);if(!t.startsWith('+')){const pf=String(prefix||'+39').trim();t=pf+t.replace(/^0+(?=\d{6,})/,pf=='+39'?'':'')}
+ return/^\+[1-9]\d{7,14}$/.test(t)?t:null}
+const waFill=(tpl,v)=>String(tpl||'').replace(/\{\{(\w+)\}\}/g,(m,k)=>v[k]??'');
+function waVars(R){const t=R.tenant,p=R.p;return{nome:t?t.first_name:'',cognome:t?t.last_name:'',periodo:'dal '+fd(p.from)+' al '+fd(p.to),appartamento:R.apt?' ('+R.apt+')':''}}
+async function waLoad(s){let cfg=(await gm('waSet'))||null,sec=null,online=true;
+ try{const r=await sb('/rest/v1/app_settings?select=data',{headers:{Accept:'application/json'}},s.at);if(!r.ok)throw await httpErr(r);const a=await r.json();if(a[0]){cfg=a[0].data;await sm('waSet',cfg)}
+  const r2=await sb('/rest/v1/rpc/app_secret_status',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'},s.at);if(r2.ok)sec=await r2.json();else if(r2.status==404)sec={_missing:true}}
+ catch(e){online=false;if(e.kind=='setup')sec={_missing:true}}
+ return{cfg:{...WA_DEF,...(cfg||{})},sec,online}}
+async function waSettings(s){const box=$('#wa');if(!box)return;
+ if(!s){box.innerHTML='<h3>Invio WhatsApp</h3><div class=card><p class=mut>Accedi (sezione qui sopra) per configurare l’invio WhatsApp: le impostazioni sono salvate nel tuo database.</p></div>';return}
+ box.innerHTML='<h3>Invio WhatsApp</h3><div class=card><p class=mut>Caricamento…</p></div>';
+ const{cfg,sec,online}=await waLoad(s);if(!$('#wa'))return;const has=k=>sec&&sec[k]===true,miss=sec&&sec._missing;
+ box.innerHTML=`<h3>Invio WhatsApp</h3><div class=card>${!online?'<p class=mut>Offline: mostro le ultime impostazioni note; per salvare serve la connessione.</p>':''}${miss?'<p class=okm style="background:#fee2e2;color:#b91c1c;border-color:#fca5a5">Database non pronto: esegui lo script SQL 003_whatsapp.sql su Supabase.</p>':''}
+ <label><input type=checkbox id=wen ${cfg.enabled?'checked':''}> Abilita l’invio WhatsApp dal report</label>
+ <label>Numero mittente WhatsApp (formato +39…; per la sandbox Twilio: +14155238886)<input id=wfrom type=tel value="${esc(cfg.from)}" placeholder="+14155238886"></label>
+ <label>Prefisso predefinito per i numeri senza prefisso<input id=wpf value="${esc(cfg.prefix)}" style="max-width:8em"></label>
+ <label>Modalità<select id=wmode><option value=free ${cfg.mode=='free'?'selected':''}>Testo libero (sandbox, o entro 24 ore dall’ultimo messaggio del destinatario)</option><option value=template ${cfg.mode=='template'?'selected':''}>Template approvato (produzione)</option></select></label>
+ <label>Testo del messaggio (segnaposto: {{nome}} {{cognome}} {{periodo}} {{appartamento}})<textarea id=wtext rows=3 style="width:100%;font:inherit;font-size:16px;padding:10px;border-radius:10px;border:1px solid #cbd5e1">${esc(cfg.text)}</textarea></label>
+ <div id=wtpl style="${cfg.mode=='template'?'':'display:none'}"><label>Content SID del template (inizia con HX…)<input id=wsid value="${esc(cfg.contentSid)}"></label>
+ <label>Variabili del template (JSON, con segnaposto)<input id=wvars value="${esc(cfg.contentVars)}"></label></div>
+ <label><input type=checkbox id=wcf ${cfg.confirm?'checked':''}> Chiedi conferma prima di inviare</label>
+ <button type=button id=wsave>Salva impostazioni</button><span id=wmsg></span>
+ <details ${has('twilio_account_sid')&&has('twilio_key_sid')&&has('twilio_key_secret')?'':'open'} style="margin-top:12px"><summary><strong>Credenziali Twilio</strong> ${WA_KEYS.every(k=>has(k[0]))?'<span class=okm>configurate ✓</span>':'<span class=mut>da inserire</span>'}</summary>
+ <p class=mut>Le credenziali vengono salvate cifrate sul server e non possono più essere lette dall’app: per cambiarle inserisci di nuovo il valore. Lascia vuoto ciò che non vuoi cambiare.</p>
+ ${WA_KEYS.map(([k,l])=>`<label>${l} ${has(k)?'<span class=okm>✓ impostato</span>':''}<input id=wk_${k} type=password autocomplete=off autocapitalize=off placeholder="${has(k)?'•••••••• (invariato)':''}"></label>`).join('')}
+ <button type=button id=wsec>Salva credenziali</button><span id=wmsg2></span></details>
+ <details style="margin-top:12px"><summary><strong>Messaggio di prova</strong></summary><p class=mut>Invia un breve testo al tuo numero (con la sandbox devi prima aver inviato il codice “join …” al numero Twilio).</p><label>Numero destinatario<input id=wtest type=tel placeholder="+39…"></label><button type=button class=sec id=wtb>Invia messaggio di prova</button><span id=wmsg3></span></details></div>`;
+ const say=(id,t,bad)=>{const e=$('#'+id);if(e)e.innerHTML=t?`<p class=okm ${bad?'style="background:#fee2e2;color:#b91c1c;border-color:#fca5a5"':''}>${esc(t)}</p>`:''};
+ $('#wmode').onchange=()=>{$('#wtpl').style.display=$('#wmode').value=='template'?'':'none'};
+ $('#wsave').onclick=async()=>{try{const d={enabled:$('#wen').checked,from:$('#wfrom').value.trim(),prefix:$('#wpf').value.trim()||'+39',mode:$('#wmode').value,contentSid:$('#wsid').value.trim(),contentVars:$('#wvars').value.trim(),text:$('#wtext').value,confirm:$('#wcf').checked};
+   if(d.from&&!normPhone(d.from,d.prefix))throw'Numero mittente non valido (esempio: +14155238886)';if(d.mode=='template'){if(!/^HX/.test(d.contentSid))throw'Content SID non valido (inizia con HX)';try{JSON.parse(d.contentVars)}catch{throw'Le variabili del template devono essere JSON valido'}}
+   const ss=await authToken(),r=await sb('/rest/v1/app_settings?on_conflict=user_id',{method:'POST',headers:{'Content-Type':'application/json',Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({user_id:ss.uid,data:d})},ss.at);
+   if(!r.ok)throw(await httpErr(r)).message;await sm('waSet',d);say('wmsg','Impostazioni salvate')}catch(e){say('wmsg',e.message||String(e),1)}};
+ $('#wsec').onclick=async()=>{try{let n=0;const ss=await authToken();for(const[k]of WA_KEYS){const v=$('#wk_'+k).value.trim();if(!v)continue;
+    if(k=='twilio_account_sid'&&!/^AC/.test(v))throw'L’Account SID deve iniziare con AC';if(k=='twilio_key_sid'&&!/^SK/.test(v))throw'L’API Key SID deve iniziare con SK';
+    const r=await sb('/rest/v1/rpc/app_set_secret',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({k,v})},ss.at);if(!r.ok)throw(await httpErr(r)).message;n++}
+   if(!n)throw'Nessun valore inserito';say('wmsg2',n+' credenziali salvate (cifrate)');setTimeout(()=>waSettings(s),900)}catch(e){say('wmsg2',e.message||String(e),1)}};
+ $('#wtb').onclick=async()=>{try{const to=normPhone($('#wtest').value,$('#wpf').value);if(!to)throw'Numero non valido';say('wmsg3','Invio…');const r=await waCall({test:true,to});say('wmsg3','Inviato ('+(r.status||'ok')+', '+r.sid+')')}catch(e){say('wmsg3',e.message||String(e),1)}}}
+async function waCall(payload){const ss=await authToken();const r=await sb('/functions/v1/send-whatsapp',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)},ss.at);
+ let j={};try{j=await r.json()}catch{}if(r.status==404)throw'Funzione send-whatsapp non trovata: va pubblicata su Supabase (vedi guida)';if(!r.ok||j.error)throw j.error||('Errore invio ('+r.status+')');return j}
+async function waSend(){const R=LASTREP;try{if(!R||!R.tenant)throw'Il report deve riguardare un singolo inquilino';const s=await getSession();if(!s)throw'Accedi dal menù Impostazioni';
+  const{cfg}=await waLoad(s);if(!cfg.enabled||!cfg.from)throw'Invio WhatsApp non configurato: vai in Impostazioni → Invio WhatsApp';
+  const to=normPhone(R.tenant.phone,cfg.prefix);if(!to)throw'Numero di telefono dell’inquilino mancante o non valido (menù Inquilini)';
+  const v=waVars(R),txt=waFill(cfg.text,v);
+  if(cfg.confirm&&!confirm(`Inviare su WhatsApp a ${R.tenant.first_name} ${R.tenant.last_name} (${to}) il file ${R.name}?\n\n${cfg.mode=='free'?txt:'(messaggio da template)'}`))return;
+  const btn=document.querySelector('button.wa');if(btn){btn.disabled=true;btn.textContent='Invio…'}
+  try{const ss=await authToken(),path=`${ss.uid}/${newUid()}.pdf`,pdf=pdfDoc(R.blocks,R.title);
+   const up=await sb(`/storage/v1/object/report-whatsapp/${path}`,{method:'POST',headers:{'Content-Type':'application/pdf'},body:pdf},ss.at);if(!up.ok)throw'PDF non caricato: '+(await httpErr(up)).message;
+   const res=await waCall({to,path,vars:v,name:R.name});alert('Messaggio inviato a '+to+' (stato: '+(res.status||'in coda')+').')}
+  finally{if(btn){btn.disabled=false;btn.textContent='Invia su WhatsApp'}}}
+ catch(e){alert(typeof e==='string'?e:'Errore: '+(e?.message||e))}}
 /* ===== file, backup, report ===== */
 const docBlob=d=>d.data?new Blob([d.data],{type:d.mime}):d.blob;
 function fileDlg(name,blob,title,back){const d=$('#dlg'),u=URL.createObjectURL(blob);d.onclick=null;
@@ -340,7 +397,7 @@ async function importAll(txt){const o=JSON.parse(txt);if(!o.apartments||!o.contr
  for(const t of TABLES){await P(DB.transaction(t,'readwrite').objectStore(t).clear());for(const r of o[t]||[]){if(t=='documents'){const bl=await(await fetch(r.blob)).blob();r.data=await bl.arrayBuffer();r.mime=r.mime||bl.type;delete r.blob}delete r.rv;r.dt=Date.now();await put(t,r,1)}}
  await sm('forceMode','local');await sm('tomb',[]);
  const m=o._meta||{},now=new Date().toISOString();await sm('lastModified',m.lastModified||now);await sm('lastRestore',now);await sm('restoredFrom',m.exportedAt||null);await sm('backupHash',await fingerprint());await loadApc();schedSync(1500)}
-function backupUI(){const d=$('#dlg');d.innerHTML=`<h3>Backup dei dati</h3><p>I dati sono salvati su questo dispositivo (e online, se hai attivato il menù Cloud). Esporta ogni tanto un backup e conservalo in File/iCloud.</p><button id=ex>Esporta backup</button><label>Ripristina da file<input type=file id=im accept=".json"></label><button onclick="$('#dlg').close()">Chiudi</button>`;d.showModal();
+function backupUI(){const d=$('#dlg');d.innerHTML=`<h3>Backup dei dati</h3><p>I dati sono salvati su questo dispositivo (e online, se hai attivato il menù Impostazioni). Esporta ogni tanto un backup e conservalo in File/iCloud.</p><button id=ex>Esporta backup</button><label>Ripristina da file<input type=file id=im accept=".json"></label><button onclick="$('#dlg').close()">Chiudi</button>`;d.showModal();
  $('#ex').onclick=doExport;
  $('#im').onchange=async e=>{const f=e.target.files[0];if(f&&confirm('Il ripristino SOSTITUISCE tutti i dati attuali. Continuare?'))try{await importAll(await f.text());alert('Ripristino completato');d.close();dash()}catch{alert('File di backup non valido')}}}
 let LASTREP=null;
@@ -427,8 +484,8 @@ async function localReport(kind,p){try{if(!p.spese&&!p.locatore&&!p.canoni)throw
   if(exL.length)R.push({t:'p',bold:1,text:'Totale spese locatore: '+eur(totL/100)})}
  if(p.canoni){R.push({t:'h3',text:'Canoni di locazione'},{t:'table',cols:[...AC,{h:'Inquilino',w:2.4},{h:'Mese',w:1.2},{h:'Dovuto',w:1.4,a:'r'},{h:'Incassato',w:1.4,a:'r'},{h:'Residuo',w:1.4,a:'r'}],rows:cn.map(c=>[...ACr(c.apt),{tag:'tn',text:c.tenant},fm(c.month),eur(c.due/100),eur(c.paid/100),eur((c.due-c.paid)/100)])});
   if(cn.length)R.push({t:'p',bold:1,text:'Totale dovuto: '+eur(cd/100)+' · Incassato: '+eur(cp/100)+' · Residuo: '+eur((cd-cp)/100)})}
- LASTREP={blocks:R,title,p,name:'report-'+fname+'.pdf'};
- $('#dlg').innerHTML=`<div class=fb><div id=pr><h2>${title}</h2><p>${ap?`${aptTag(ap.name,ap.id)} — ${esc(ap.address)}, ${esc(ap.city)}`:'<b>Tutti gli appartamenti</b>'}${p.tenant?'<br>Inquilino: '+tnTag(tn(+p.tenant)):''}<br>Periodo: ${fd(p.from)} / ${fd(p.to)}</p>${spB}${lcB}${cnB}</div></div><div class=ft><button onclick="savePdf()">Salva PDF</button><button class=sec onclick="doPrint()">Stampa</button><button class=sec onclick="$('#dlg').close()">Chiudi</button></div>`;$('#dlg').showModal()}
+ LASTREP={blocks:R,title,p,name:'report-'+fname+'.pdf',tenant:p.tenant?te.find(x=>x.id==p.tenant)||null:null,apt:ap?ap.name:''};
+ $('#dlg').innerHTML=`<div class=fb><div id=pr><h2>${title}</h2><p>${ap?`${aptTag(ap.name,ap.id)} — ${esc(ap.address)}, ${esc(ap.city)}`:'<b>Tutti gli appartamenti</b>'}${p.tenant?'<br>Inquilino: '+tnTag(tn(+p.tenant)):''}<br>Periodo: ${fd(p.from)} / ${fd(p.to)}</p>${spB}${lcB}${cnB}</div></div><div class=ft><button onclick="savePdf()">Salva PDF</button>${p.tenant?'<button class=wa onclick="waSend()">Invia su WhatsApp</button>':''}<button class=sec onclick="doPrint()">Stampa</button><button class=sec onclick="$('#dlg').close()">Chiudi</button></div>`;$('#dlg').showModal()}
  catch(e){alert(typeof e==='string'?e:'Errore: '+(e?.message||e))}}
 
 const R={apartments:r=>r.name,tenants:r=>r.first_name+' '+r.last_name,expense_types:r=>r.name,rooms:r=>r.name};
@@ -438,7 +495,7 @@ const S={apartments:['Appartamenti',[['name','Nome'],['color','Colore','color'],
  rooms:['Camere',[A,['name','Camera'],['beds','Posti letto','number'],['sqm','Mq','number']]],
  contracts:['Contratti',[['tenant_id','Inquilino','ref:tenants'],A,['room_id','Camera','ref:rooms'],['start_date','Ingresso','date'],['end_date','Uscita','date'],['monthly_rent','Canone €','number'],['deposit','Caparra €','number'],['due_day','Giorno scadenza','number'],['notes','Note']]],
  expenses:['Spese',[A,['type_id','Tipologia','ref:expense_types'],['description','Descrizione'],['amount','Importo per inquilini €','number'],['landlord_amount','Importo locatore €','number'],['spent_on','Scadenza','date'],['period_from','Competenza dal','date'],['period_to','Competenza al','date'],['supplier','Fornitore'],['notes','Note']]]};
-const V={dash:['Dashboard',()=>dash()],charts:['Grafici',()=>charts()],dues:['Canoni',()=>dues()],expenses:[S.expenses[0],()=>list('expenses')],report:['Report',()=>report()],deposits:['Caparre',()=>depositsView()],contracts:[S.contracts[0],()=>list('contracts')],apartments:[S.apartments[0],()=>list('apartments')],rooms:[S.rooms[0],()=>list('rooms')],tenants:[S.tenants[0],()=>list('tenants')],cloud:['Cloud',()=>cloudView()]};
+const V={dash:['Dashboard',()=>dash()],charts:['Grafici',()=>charts()],dues:['Canoni',()=>dues()],expenses:[S.expenses[0],()=>list('expenses')],report:['Report',()=>report()],deposits:['Caparre',()=>depositsView()],contracts:[S.contracts[0],()=>list('contracts')],apartments:[S.apartments[0],()=>list('apartments')],rooms:[S.rooms[0],()=>list('rooms')],tenants:[S.tenants[0],()=>list('tenants')],cloud:['Impostazioni',()=>cloudView()]};
 function nav(){$('#nav').innerHTML=Object.entries(V).map(([k,v])=>`<button data-k=${k}>${v[0]}</button>`).join('')+'<button id=bk>Backup</button>'}
 $('#nav').onclick=e=>{const k=e.target.dataset.k;if(e.target.id=='bk')backupUI();if(k){CURK=k;$('#main').onclick=null;document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b==e.target));V[k][1]()}};
 function login(){$('#app').hidden=true;$('#login').hidden=false}
