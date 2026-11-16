@@ -66,7 +66,7 @@ label.cam{display:inline-block;background:#1d4ed8;color:#fff;padding:12px 16px;b
 const $=s=>document.querySelector(s),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),
 eur=v=>Number(v).toLocaleString('it-IT',{style:'currency',currency:'EUR'}),thisM=()=>new Date().toISOString().slice(0,7);
 
-const APP_VERSION='1.9.0';
+const APP_VERSION='1.10.0';
 const mn=(id,v)=>`<span class=mnav><button type=button class=sec data-mn="${id}:-1" aria-label="Mese precedente">‹</button><input type=month id=${id} value="${v}"><button type=button class=sec data-mn="${id}:1" aria-label="Mese successivo">›</button></span>`;
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-mn]');if(!b)return;const[id,d]=b.dataset.mn.split(':'),i=document.getElementById(id);if(!i)return;
  const[y,m]=(i.value||thisM()).split('-').map(Number);i.value=new Date(Date.UTC(y,m-1+ +d,1)).toISOString().slice(0,7);i.dispatchEvent(new Event('change',{bubbles:true}))});
@@ -329,12 +329,12 @@ async function cloudView(msg){const s=await getSession(),cl=await cloudLine(),ba
  waSettings(s)}
 
 /* ===== WhatsApp (Twilio) via funzione Supabase: impostazioni, credenziali write-only, invio ===== */
-const WA_DEF={enabled:false,from:'',prefix:'+39',mode:'free',contentSid:'',contentVars:'{"1":"{{nome}}","2":"{{periodo}}"}',text:'Ciao {{nome}}, ti invio il resoconto {{periodo}}{{appartamento}}. Grazie!',confirm:true};
+const WA_DEF={enabled:false,from:'',prefix:'+39',mode:'free',contentSid:'',contentVars:'{"1":"{{nome}}","2":"{{periodo}}"}',mediaVar:'',text:'Ciao {{nome}}, ti invio il resoconto {{periodo}} per l’appartamento {{appartamento}}. Grazie!',confirm:true};
 const WA_KEYS=[['twilio_account_sid','Account SID (inizia con AC…)'],['twilio_key_sid','API Key SID (inizia con SK…)'],['twilio_key_secret','API Key Secret']];
 function normPhone(raw,prefix){let t=String(raw||'').trim().replace(/[\s().\-\/]/g,'');if(t.startsWith('00'))t='+'+t.slice(2);if(!t.startsWith('+')){const pf=String(prefix||'+39').trim();t=pf+t.replace(/^0+(?=\d{6,})/,pf=='+39'?'':'')}
  return/^\+[1-9]\d{7,14}$/.test(t)?t:null}
 const waFill=(tpl,v)=>String(tpl||'').replace(/\{\{(\w+)\}\}/g,(m,k)=>v[k]??'');
-function waVars(R){const t=R.tenant,p=R.p;return{nome:t?t.first_name:'',cognome:t?t.last_name:'',periodo:'dal '+fd(p.from)+' al '+fd(p.to),appartamento:R.apt?' ('+R.apt+')':''}}
+function waVars(R){const t=R.tenant,p=R.p;return{nome:t?t.first_name:'',cognome:t?t.last_name:'',periodo:'dal '+fd(p.from)+' al '+fd(p.to),appartamento:R.apt||'(tutti)'}}
 async function waLoad(s){let cfg=(await gm('waSet'))||null,sec=null,online=true;
  try{const r=await sb('/rest/v1/app_settings?select=data',{headers:{Accept:'application/json'}},s.at);if(!r.ok)throw await httpErr(r);const a=await r.json();if(a[0]){cfg=a[0].data;await sm('waSet',cfg)}
   const r2=await sb('/rest/v1/rpc/app_secret_status',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'},s.at);if(r2.ok)sec=await r2.json();else if(r2.status==404)sec={_missing:true}}
@@ -351,7 +351,15 @@ async function waSettings(s){const box=$('#wa');if(!box)return;
  <label>Modalità<select id=wmode><option value=free ${cfg.mode=='free'?'selected':''}>Testo libero (sandbox, o entro 24 ore dall’ultimo messaggio del destinatario)</option><option value=template ${cfg.mode=='template'?'selected':''}>Template approvato (produzione)</option></select></label>
  <label>Testo del messaggio (segnaposto: {{nome}} {{cognome}} {{periodo}} {{appartamento}})<textarea id=wtext rows=3 style="width:100%;font:inherit;font-size:16px;padding:10px;border-radius:10px;border:1px solid #cbd5e1">${esc(cfg.text)}</textarea></label>
  <div id=wtpl style="${cfg.mode=='template'?'':'display:none'}"><label>Content SID del template (inizia con HX…)<input id=wsid value="${esc(cfg.contentSid)}"></label>
- <label>Variabili del template (JSON, con segnaposto)<input id=wvars value="${esc(cfg.contentVars)}"></label></div>
+ <label>Variabili del template (JSON, con segnaposto)<input id=wvars value="${esc(cfg.contentVars)}"></label>
+ <label>Variabile del PDF (vuoto se il template non contiene il PDF)<input id=wmv value="${esc(cfg.mediaVar||'')}" style="max-width:6em"></label>
+ <details style="margin-top:8px"><summary><strong>Crea un template su Twilio</strong></summary>
+ <p class=mut>Crea il template partendo dal “Testo del messaggio” qui sopra (salvalo prima). Il testo non può iniziare o finire con un segnaposto né averne due vicini. Dopo la creazione i campi qui sopra si compilano da soli: premi poi “Salva impostazioni”.</p>
+ <label>Nome del template (minuscole, numeri e _)<input id=wtn value="resoconto_inquilino" autocapitalize=off></label>
+ <label><input type=checkbox id=wtm checked> Includi il PDF come allegato del template</label>
+ <label><input type=checkbox id=wts checked> Invia subito a WhatsApp per l’approvazione</label>
+ <label>Categoria<select id=wtc><option value=UTILITY>Utility (informativo)</option><option value=MARKETING>Marketing</option></select></label>
+ <button type=button class=sec id=wtcreate>Crea template</button><span id=wmsg4></span></details></div>
  <label><input type=checkbox id=wcf ${cfg.confirm?'checked':''}> Chiedi conferma prima di inviare</label>
  <button type=button id=wsave>Salva impostazioni</button><span id=wmsg></span>
  <details ${has('twilio_account_sid')&&has('twilio_key_sid')&&has('twilio_key_secret')?'':'open'} style="margin-top:12px"><summary><strong>Credenziali Twilio</strong> ${WA_KEYS.every(k=>has(k[0]))?'<span class=okm>configurate ✓</span>':'<span class=mut>da inserire</span>'}</summary>
@@ -361,10 +369,14 @@ async function waSettings(s){const box=$('#wa');if(!box)return;
  <details style="margin-top:12px"><summary><strong>Messaggio di prova</strong></summary><p class=mut>Invia un breve testo al tuo numero (con la sandbox devi prima aver inviato il codice “join …” al numero Twilio).</p><label>Numero destinatario<input id=wtest type=tel placeholder="+39…"></label><button type=button class=sec id=wtb>Invia messaggio di prova</button><span id=wmsg3></span></details></div>`;
  const say=(id,t,bad)=>{const e=$('#'+id);if(e)e.innerHTML=t?`<p class=okm ${bad?'style="background:#fee2e2;color:#b91c1c;border-color:#fca5a5"':''}>${esc(t)}</p>`:''};
  $('#wmode').onchange=()=>{$('#wtpl').style.display=$('#wmode').value=='template'?'':'none'};
- $('#wsave').onclick=async()=>{try{const d={enabled:$('#wen').checked,from:$('#wfrom').value.trim(),prefix:$('#wpf').value.trim()||'+39',mode:$('#wmode').value,contentSid:$('#wsid').value.trim(),contentVars:$('#wvars').value.trim(),text:$('#wtext').value,confirm:$('#wcf').checked};
+ $('#wsave').onclick=async()=>{try{const d={enabled:$('#wen').checked,from:$('#wfrom').value.trim(),prefix:$('#wpf').value.trim()||'+39',mode:$('#wmode').value,contentSid:$('#wsid').value.trim(),contentVars:$('#wvars').value.trim(),mediaVar:$('#wmv').value.trim(),text:$('#wtext').value,confirm:$('#wcf').checked};
    if(d.from&&!normPhone(d.from,d.prefix))throw'Numero mittente non valido (esempio: +14155238886)';if(d.mode=='template'){if(!/^HX/.test(d.contentSid))throw'Content SID non valido (inizia con HX)';try{JSON.parse(d.contentVars)}catch{throw'Le variabili del template devono essere JSON valido'}}
    const ss=await authToken(),r=await sb('/rest/v1/app_settings?on_conflict=user_id',{method:'POST',headers:{'Content-Type':'application/json',Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({user_id:ss.uid,data:d})},ss.at);
    if(!r.ok)throw(await httpErr(r)).message;await sm('waSet',d);say('wmsg','Impostazioni salvate')}catch(e){say('wmsg',e.message||String(e),1)}};
+ $('#wtcreate').onclick=async()=>{try{const text=$('#wtext').value.trim();say('wmsg4','Creazione in corso…');
+   const r=await waCall({action:'create_template',name:$('#wtn').value.trim(),text,media:$('#wtm').checked,submit:$('#wts').checked,category:$('#wtc').value});
+   $('#wsid').value=r.sid;$('#wvars').value=r.contentVars;$('#wmv').value=r.mediaVar||'';$('#wmode').value='template';$('#wtpl').style.display='';
+   say('wmsg4','Template creato ('+r.sid+')'+(r.approval?' · approvazione: '+r.approval:'')+'. Premi “Salva impostazioni”.')}catch(e){say('wmsg4',e.message||String(e),1)}};
  $('#wsec').onclick=async()=>{try{let n=0;const ss=await authToken();for(const[k]of WA_KEYS){const v=$('#wk_'+k).value.trim();if(!v)continue;
     if(k=='twilio_account_sid'&&!/^AC/.test(v))throw'L’Account SID deve iniziare con AC';if(k=='twilio_key_sid'&&!/^SK/.test(v))throw'L’API Key SID deve iniziare con SK';
     const r=await sb('/rest/v1/rpc/app_set_secret',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({k,v})},ss.at);if(!r.ok)throw(await httpErr(r)).message;n++}
