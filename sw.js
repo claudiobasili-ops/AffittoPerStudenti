@@ -1,5 +1,5 @@
-const F=['./', 'index.html', 'manifest.json', 'icon.svg', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png', 'css/app.css', 'js/api.js', 'js/backup.js', 'js/cloud/supabase.js', 'js/cloud/sync.js', 'js/cloud/whatsapp.js', 'js/db.js', 'js/lib/pdf.js', 'js/main.js', 'js/menu.js', 'js/rules.js', 'js/schema.js', 'js/state.js', 'js/ui.js', 'js/util.js', 'js/views/attachments.js', 'js/views/charts.js', 'js/views/dashboard.js', 'js/views/deposits.js', 'js/views/dues.js', 'js/views/entities.js', 'js/views/expenses.js', 'js/views/report.js', 'js/views/settings.js'];
-const C='v13';
+const F=['./', 'index.html', 'manifest.json', 'icon.svg', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png', 'app.css', 'api.js', 'backup.js', 'cloud-supabase.js', 'cloud-sync.js', 'cloud-whatsapp.js', 'db.js', 'lib-pdf.js', 'main.js', 'menu.js', 'rules.js', 'schema.js', 'state.js', 'ui.js', 'util.js', 'views-attachments.js', 'views-charts.js', 'views-dashboard.js', 'views-deposits.js', 'views-dues.js', 'views-entities.js', 'views-expenses.js', 'views-report.js', 'views-settings.js'];
+const C='v14';
 self.addEventListener('install',e=>e.waitUntil(caches.open(C).then(c=>c.addAll(F))));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==C).map(x=>caches.delete(x))))));
 self.addEventListener('fetch',e=>{if(e.request.method!=='GET'||new URL(e.request.url).origin!==location.origin)return;

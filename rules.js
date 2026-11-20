@@ -1,0 +1,60 @@
+// Regole di business: controlli, ripartizioni, calcolo canoni e caparre
+import { all, get } from './db.js';
+import { COLS, NUM, REQ } from './schema.js';
+import { addD, fd, sum0, sumk, today } from './util.js';
+
+export function norm(t,b){const o={};for(const k of COLS[t].split(',')){let v=b[k];if(v===''||v===undefined)v=null;else if(k.endsWith('_id')||NUM.includes(k))v=Number(String(v).replace(',','.'));o[k]=v}if(b.id)o.id=Number(b.id);return o}
+export async function check(t,o){if(t=='deposit_moves'){if(!['versamento','restituzione'].includes(o.kind))throw'Tipo di movimento non valido';const dr=(await depositRows()).find(d=>d.id===o.contract_id);
+  if(dr&&o.kind=='versamento'&&dr.deposit>0&&o.amount>dr.toPay+.005)throw"L'importo supera la caparra ancora da versare ("+dr.toPay.toFixed(2)+" €)";
+  if(dr&&o.kind=='restituzione'&&o.amount>dr.held+.005)throw"L'importo supera la caparra in deposito ("+dr.held.toFixed(2)+" €)"}
+ if(t=='contracts'&&o.deposit!=null&&o.deposit<0)throw'La caparra non può essere negativa';
+ if(t=='share_payments'){const sr=(await sharesRows()).find(s=>s.id===o.share_id);if(sr&&o.amount>sr.remaining+.005)throw"L'importo supera il residuo ("+sr.remaining.toFixed(2)+" €)"}
+ if(t=='payments'){const du=(await duesRows()).find(d=>d.id===o.due_id);if(du&&o.amount>du.remaining+.005)throw"L'importo supera il residuo ("+du.remaining.toFixed(2)+" €)"}
+ if(t=='contracts'&&o.due_day&&(o.due_day<1||o.due_day>28))throw'Il giorno di scadenza deve essere tra 1 e 28';
+ if(t=='tenants'&&o.tax_code){o.tax_code=o.tax_code.toUpperCase().trim();if(!/^[A-Z0-9]{16}$/.test(o.tax_code))throw'Codice fiscale non valido (16 caratteri)'}for(const k of REQ[t]||[])if(o[k]==null||Number.isNaN(o[k]))throw'Compila il campo obbligatorio: '+k;
+ if(t=='expenses'){o.amount=o.amount??0;o.landlord_amount=o.landlord_amount??0;if(Number.isNaN(o.amount)||Number.isNaN(o.landlord_amount)||o.amount<0||o.landlord_amount<0)throw'Gli importi non possono essere negativi';if(!(o.amount>0)&&!(o.landlord_amount>0))throw'Indica almeno un importo: per inquilini o per il locatore'}
+ if((t=='payments'||t=='share_payments'||t=='deposit_moves')&&o.amount<=0)throw'L\'importo deve essere maggiore di zero';
+ if(t=='contracts'){if(o.end_date&&o.end_date<o.start_date)throw'La data di uscita precede quella di ingresso';
+  if(o.room_id){const rm=await get('rooms',o.room_id),cap=Math.max(1,rm?.beds||1),oth=(await all('contracts')).filter(c=>c.id!==o.id&&c.room_id===o.room_id&&o.start_date<=(c.end_date||'9999')&&c.start_date<=(o.end_date||'9999')),
+   pts=[o.start_date,...oth.map(c=>c.start_date).filter(d=>d>o.start_date&&d<=(o.end_date||'9999'))],mx=Math.max(...pts.map(p=>1+oth.filter(c=>c.start_date<=p&&(c.end_date||'9999')>=p).length));
+   if(mx>cap)throw cap>1?`La camera ha ${cap} posti letto: in quel periodo ci sarebbero ${mx} persone`:'La camera è già assegnata in quel periodo'}}
+ if(t=='rooms'){if(Number.isNaN(o.sqm))throw'Metri quadri non validi';if(o.sqm!=null&&o.sqm<=0)throw'I metri quadri devono essere maggiori di zero';
+  const ap=o.apartment_id?await get('apartments',o.apartment_id):null,old=o.id?await get('rooms',o.id):null;
+  if(ap){const oth=(await all('rooms')).filter(r=>r.apartment_id===ap.id&&r.id!==o.id),moved=!old||old.apartment_id!==ap.id;
+   if(moved&&ap.rooms!=null&&oth.length+1>ap.rooms)throw`L’appartamento “${ap.name}” ha ${ap.rooms} camere: ne risultano già censite ${oth.length}`;
+   const bt=sum0(oth.map(r=>r.beds||0))+(o.beds||0);if((moved||(old.beds||0)!==(o.beds||0))&&ap.beds!=null&&bt>ap.beds)throw`I posti letto delle camere (${bt}) supererebbero quelli dell’appartamento “${ap.name}” (${ap.beds})`}}
+ if(t=='expenses'&&o.period_to<o.period_from)throw'Periodo di competenza non valido'}
+export function split(total,w){const S=sum0(w);if(!S)throw'I valori inseriti non possono essere tutti zero';const raw=w.map(x=>total*x/S),fl=raw.map(Math.floor),rem=total-sum0(fl);
+ raw.map((x,i)=>[x-fl[i],i]).sort((a,b)=>b[0]-a[0]).slice(0,rem).forEach(([,i])=>fl[i]++);return fl}
+export async function involved(e){const m=new Map();
+ for(const c of(await all('contracts')).filter(c=>c.apartment_id===e.apartment_id&&c.start_date<=e.period_to&&(!c.end_date||c.end_date>=e.period_from))){
+  const f=c.start_date>e.period_from?c.start_date:e.period_from,t=c.end_date&&c.end_date<e.period_to?c.end_date:e.period_to;
+  m.set(c.tenant_id,(m.get(c.tenant_id)||0)+Math.round((new Date(t)-new Date(f))/864e5)+1)}
+ const Te=await all('tenants');return[...m].map(([id,days])=>{const t=Te.find(x=>x.id===id);return{id,name:t.first_name+' '+t.last_name,days}})}
+export async function mqWeights(e,T){const[C,Ro,Te]=await Promise.all(['contracts','rooms','tenants'].map(all)),Cs=C.filter(c=>c.apartment_id===e.apartment_id&&c.start_date<=e.period_to&&(!c.end_date||c.end_date>=e.period_from)),
+ miss=[...new Set(Cs.filter(c=>{const r=Ro.find(x=>x.id===c.room_id);return!(r&&r.sqm>0)}).map(c=>c.tenant_id))];
+ if(miss.length)throw'Per ripartire per mq serve la camera con i metri quadri nel contratto di: '+miss.map(id=>{const t=Te.find(x=>x.id===id);return t.first_name+' '+t.last_name}).join(', ');
+ const w=new Map(T.map(t=>[t.id,0]));
+ for(let d=e.period_from;d<=e.period_to;d=addD(d,1)){const rm=new Map();
+  for(const c of Cs)if(c.start_date<=d&&(!c.end_date||c.end_date>=d)){if(!rm.has(c.room_id))rm.set(c.room_id,new Set());rm.get(c.room_id).add(c.tenant_id)}
+  for(const[rid,ts]of rm){const q=Ro.find(x=>x.id===rid).sqm/ts.size;for(const tid of ts)w.set(tid,(w.get(tid)||0)+q)}}
+ return T.map(t=>Math.round((w.get(t.id)||0)*1e6)/1e6)}
+export async function duesRows(month){const[D,C,Te,Ap,Pa]=await Promise.all(['rent_dues','contracts','tenants','apartments','payments'].map(all));
+ return D.filter(d=>!month||d.month.slice(0,7)===month).map(d=>{const c=C.find(x=>x.id===d.contract_id),t=Te.find(x=>x.id===c.tenant_id),paid=sumk(Pa.filter(p=>p.due_id===d.id),'amount'),rem=Math.round((d.amount-paid)*100)/100;
+  return{id:d.id,month:d.month,amount:d.amount,tenant:t.first_name+' '+t.last_name,apartment:Ap.find(x=>x.id===c.apartment_id).name,apt:c.apartment_id,paid,remaining:rem,late:rem>0&&d.month.slice(0,8)+String(c.due_day||5).padStart(2,'0')<today()}})
+ .sort((a,b)=>b.month.localeCompare(a.month)||a.apartment.localeCompare(b.apartment))}
+export async function sharesRows(){const[Al,Sh,SP,E,Te,Ap,Ty]=await Promise.all(['allocations','allocation_shares','share_payments','expenses','tenants','apartments','expense_types'].map(all));
+ return Sh.map(s=>{const al=Al.find(a=>a.id===s.allocation_id),e=al&&E.find(x=>x.id===al.expense_id);if(!e)return null;const t=Te.find(x=>x.id===s.tenant_id),pays=SP.filter(p=>p.share_id===s.id).sort((x,y)=>y.paid_on.localeCompare(x.paid_on)||y.id-x.id),pc=sum0(pays.map(p=>Math.round(p.amount*100)));
+  return{id:s.id,expense_id:e.id,desc:e.description||Ty.find(x=>x.id===e.type_id)?.name||'Spesa',spent_on:e.spent_on,apt:e.apartment_id,apartment:Ap.find(x=>x.id===e.apartment_id)?.name||'',tenant_id:s.tenant_id,tenant:t.first_name+' '+t.last_name,
+   final:s.final_cents/100,paid:pc/100,remaining:(s.final_cents-pc)/100,payments:pays}}).filter(Boolean).sort((a,b)=>b.spent_on.localeCompare(a.spent_on)||a.tenant.localeCompare(b.tenant))}
+export async function depositRows(){const[C,Te,Ap,M]=await Promise.all(['contracts','tenants','apartments','deposit_moves'].map(all)),rk={'Da restituire':0,'Da versare':1,'Versata in parte':1,'Versata':2,'Restituita in parte':2,'Restituita':3};
+ return C.map(c=>{const mv=M.filter(m=>m.contract_id===c.id).sort((a,b)=>b.moved_on.localeCompare(a.moved_on)||b.id-a.id);if(!(c.deposit>0)&&!mv.length)return null;
+  const cs=k=>sum0(mv.filter(m=>m.kind===k).map(m=>Math.round(m.amount*100)))/100,paid=cs('versamento'),ret=cs('restituzione'),held=Math.round((paid-ret)*100)/100,dep=c.deposit||0,toPay=Math.max(0,Math.round((dep-paid)*100)/100),ended=!!c.end_date&&c.end_date<today(),t=Te.find(x=>x.id===c.tenant_id);
+  const status=ret>0&&held<=.004?'Restituita':held>.004&&ended?'Da restituire':ret>0?'Restituita in parte':paid<=0?'Da versare':toPay>.004?'Versata in parte':'Versata';
+  return{id:c.id,tenant:t.first_name+' '+t.last_name,apartment:Ap.find(x=>x.id===c.apartment_id)?.name||'',apt:c.apartment_id,start:c.start_date,end:c.end_date,deposit:dep,paid,returned:ret,held,toPay,status,moves:mv}})
+  .filter(Boolean).sort((a,b)=>rk[a.status]-rk[b.status]||a.tenant.localeCompare(b.tenant))}
+export async function roomInfo(m){const[Ro,C,Te]=await Promise.all(['rooms','contracts','tenants'].map(all)),ms=m+'-01',me=new Date(Date.UTC(+m.slice(0,4),+m.slice(5),0)).toISOString().slice(0,10),o={};
+ for(const r of Ro){const cs=C.filter(c=>c.room_id===r.id),ov=cs.filter(c=>c.start_date<=me&&(!c.end_date||c.end_date>=ms)),full=ov.some(c=>c.start_date<=ms&&(!c.end_date||c.end_date>=me));
+  if(ov.length)o[r.id]={st:full?'Occupata':'Parzialmente occupata',per:ov.map(c=>{const t=Te.find(x=>x.id===c.tenant_id);return t.first_name+' '+t.last_name+': da '+fd(c.start_date)+' a '+(c.end_date?fd(c.end_date):'in corso')}).join(' · ')};
+  else{const pv=cs.filter(c=>c.end_date&&c.end_date<ms).map(c=>c.end_date).sort().pop(),nx=cs.filter(c=>c.start_date>me).map(c=>c.start_date).sort()[0];
+   o[r.id]={st:'Libera',per:'da '+(pv?fd(addD(pv,1)):'—')+' a '+(nx?fd(addD(nx,-1)):'aperto')}}}return o}
