@@ -1,7 +1,7 @@
 // Motore locale che simula le API (instradamento delle richieste)
 import { newUid } from './cloud-supabase.js';
 import { P, all, get, gm, put, sm, touch } from './db.js';
-import { check, depositRows, duesRows, involved, mqWeights, norm, sharesRows, split } from './rules.js';
+import { check, depositRows, duesRows, involved, mqWeights, norm, series, sharesRows, split } from './rules.js';
 import { CAS, COLS, FK } from './schema.js';
 import { st } from './state.js';
 import { loadApc } from './ui.js';
@@ -16,6 +16,7 @@ async function route(p,o){const m=o.method||'GET',b=o.body,[path,qs]=p.split('?'
   if(m=='DELETE'){await rm(t,+a[1]);return{ok:1}}const x=norm(t,b);if(a[1])x.id=+a[1];await check(t,x);
   if(t=='expenses'&&x.id){const old=await get('expenses',x.id),al=(await all('allocations')).find(q=>q.expense_id===x.id);
    if(old&&al&&(old.amount!==x.amount||old.apartment_id!==x.apartment_id||old.period_from!==x.period_from||old.period_to!==x.period_to)){await rm('allocations',al.id);setTimeout(()=>alert('Spesa modificata: la ripartizione precedente è stata annullata. Rifalla con "Ripartisci".'),300)}}
+  if(t=='expenses'&&!x.id&&x.recurring){const S=series(x);let f=null;for(const s of S){const r=await put(t,s);if(!f)f=r}return f}
   return put(t,x)}
  if(a[0]=='rent_dues'&&m=='DELETE'){await rm('rent_dues',+a[1]);return{ok:1}}
  if(path=='dues')return duesRows(Q.get('month'));

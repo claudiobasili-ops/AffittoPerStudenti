@@ -4,17 +4,29 @@ import { COLS, NUM, REQ } from './schema.js';
 import { addD, fd, sum0, sumk, today } from './util.js';
 
 export function norm(t,b){const o={};for(const k of COLS[t].split(',')){let v=b[k];if(v===''||v===undefined)v=null;else if(k.endsWith('_id')||NUM.includes(k))v=Number(String(v).replace(',','.'));o[k]=v}if(b.id)o.id=Number(b.id);return o}
+export const FREQ = {settimanale:[7,0],bisettimanale:[14,0],mensile:[0,1],bimensile:[0,2],semestrale:[0,6],annuale:[0,12]};
+export function freqAdd(d,f,k){const q=FREQ[f];if(!q||!d)return d;if(q[0])return addD(d,q[0]*k);
+ const x=new Date(d+'T00:00:00Z'),y=x.getUTCFullYear(),mo=x.getUTCMonth()+q[1]*k,last=new Date(Date.UTC(y,mo+1,0)).getUTCDate();
+ return new Date(Date.UTC(y,mo,Math.min(x.getUTCDate(),last))).toISOString().slice(0,10)}
+export function series(o){if(!o.recurring||!FREQ[o.frequency]||!o.period_from||!o.period_to||!o.spent_on)return[o];const out=[];
+ for(let k=0;k<400;k++){const pf=freqAdd(o.period_from,o.frequency,k);if(pf>o.period_to)break;
+  const nx=addD(freqAdd(o.period_from,o.frequency,k+1),-1);out.push({...o,spent_on:freqAdd(o.spent_on,o.frequency,k),period_from:pf,period_to:nx<o.period_to?nx:o.period_to})}
+ return out.length?out:[o]}
 export async function check(t,o){if(t=='deposit_moves'){if(!['versamento','restituzione','trasferimento'].includes(o.kind))throw'Tipo di movimento non valido';const dr=(await depositRows()).find(d=>d.id===o.contract_id);
   if(o.kind=='trasferimento'){if(!o.to_contract_id)throw'Scegli il nuovo contratto di destinazione';if(o.to_contract_id===o.contract_id)throw'Il nuovo contratto deve essere diverso da quello attuale';const C=await all('contracts'),a=C.find(c=>c.id===o.contract_id),b=C.find(c=>c.id===o.to_contract_id);if(!a||!b||a.tenant_id!==b.tenant_id)throw'Il nuovo contratto deve appartenere allo stesso inquilino';if(dr&&o.amount>dr.held+.005)throw"L'importo supera la caparra in deposito ("+dr.held.toFixed(2)+" €)"}
   else if(o.to_contract_id)throw'Il contratto di destinazione è ammesso solo per i trasferimenti';
   if(dr&&o.kind=='versamento'&&dr.deposit>0&&o.amount>dr.toPay+.005)throw"L'importo supera la caparra ancora da versare ("+dr.toPay.toFixed(2)+" €)";
   if(dr&&o.kind=='restituzione'&&o.amount>dr.held+.005)throw"L'importo supera la caparra in deposito ("+dr.held.toFixed(2)+" €)"}
  if(t=='contracts'&&o.deposit!=null&&o.deposit<0)throw'La caparra non può essere negativa';
+ if(t=='contracts'&&o.cedolare!=null&&(o.cedolare<0||o.cedolare>100))throw'La cedolare secca deve essere una percentuale tra 0 e 100';
  if(t=='share_payments'){const sr=(await sharesRows()).find(s=>s.id===o.share_id);if(sr&&o.amount>sr.remaining+.005)throw"L'importo supera il residuo ("+sr.remaining.toFixed(2)+" €)"}
  if(t=='payments'){const du=(await duesRows()).find(d=>d.id===o.due_id);if(du&&o.amount>du.remaining+.005)throw"L'importo supera il residuo ("+du.remaining.toFixed(2)+" €)"}
  if(t=='contracts'&&o.due_day&&(o.due_day<1||o.due_day>28))throw'Il giorno di scadenza deve essere tra 1 e 28';
  if(t=='tenants'&&o.tax_code){o.tax_code=o.tax_code.toUpperCase().trim();if(!/^[A-Z0-9]{16}$/.test(o.tax_code))throw'Codice fiscale non valido (16 caratteri)'}for(const k of REQ[t]||[])if(o[k]==null||Number.isNaN(o[k]))throw'Compila il campo obbligatorio: '+k;
- if(t=='expenses'){o.amount=o.amount??0;o.landlord_amount=o.landlord_amount??0;if(Number.isNaN(o.amount)||Number.isNaN(o.landlord_amount)||o.amount<0||o.landlord_amount<0)throw'Gli importi non possono essere negativi';if(!(o.amount>0)&&!(o.landlord_amount>0))throw'Indica almeno un importo: per inquilini o per il locatore'}
+ if(t=='expenses'){o.amount=o.amount??0;o.landlord_amount=o.landlord_amount??0;if(Number.isNaN(o.amount)||Number.isNaN(o.landlord_amount)||o.amount<0||o.landlord_amount<0)throw'Gli importi non possono essere negativi';if(!(o.amount>0)&&!(o.landlord_amount>0))throw'Indica almeno un importo: per inquilini o per il locatore';
+  if(o.period_to<o.period_from)throw'La competenza «al» precede la competenza «dal»';
+  if(o.recurring){if(!FREQ[o.frequency])throw'Scegli la frequenza della spesa ricorrente';if(!o.id&&series(o).length>120)throw'Troppe ripetizioni (oltre 120): riduci il periodo di competenza o cambia frequenza'}
+  else o.frequency=null}
  if((t=='payments'||t=='share_payments'||t=='deposit_moves')&&o.amount<=0)throw'L\'importo deve essere maggiore di zero';
  if(t=='contracts'){if(o.end_date&&o.end_date<o.start_date)throw'La data di uscita precede quella di ingresso';
   if(o.room_id){const rm=await get('rooms',o.room_id),cap=Math.max(1,rm?.beds||1),oth=(await all('contracts')).filter(c=>c.id!==o.id&&c.room_id===o.room_id&&o.start_date<=(c.end_date||'9999')&&c.start_date<=(o.end_date||'9999')),
