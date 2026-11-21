@@ -37,6 +37,12 @@ export async function check(t,o){if(t=='deposit_moves'){if(!['versamento','resti
   if(ap){const oth=(await all('rooms')).filter(r=>r.apartment_id===ap.id&&r.id!==o.id),moved=!old||old.apartment_id!==ap.id;
    if(moved&&ap.rooms!=null&&oth.length+1>ap.rooms)throw`L’appartamento “${ap.name}” ha ${ap.rooms} camere: ne risultano già censite ${oth.length}`;
    const bt=sum0(oth.map(r=>r.beds||0))+(o.beds||0);if((moved||(old.beds||0)!==(o.beds||0))&&ap.beds!=null&&bt>ap.beds)throw`I posti letto delle camere (${bt}) supererebbero quelli dell’appartamento “${ap.name}” (${ap.beds})`}}
+ if(t=='apartments'){for(const k of['purchase_price','purchase_costs','renovation','mortgage_payment','mortgage_interest','mortgage_principal','own_capital'])if(Number.isNaN(o[k])||o[k]<0)throw'Gli importi di investimento e mutuo non possono essere negativi';
+  const r2=v=>Math.round(v*100)/100,mp=o.mortgage_payment,mi=o.mortgage_interest,mc=o.mortgage_principal;
+  if(mp==null&&mi!=null&&mc!=null)o.mortgage_payment=r2(mi+mc);
+  else if(mp!=null&&mi!=null&&mc==null){if(mi>mp+.005)throw'La quota interessi supera la rata del mutuo';o.mortgage_principal=r2(mp-mi)}
+  else if(mp!=null&&mi==null&&mc!=null){if(mc>mp+.005)throw'La quota capitale supera la rata del mutuo';o.mortgage_interest=r2(mp-mc)}
+  else if(mp!=null&&mi!=null&&mc!=null&&Math.abs(mi+mc-mp)>.005)throw`Quota interessi (${mi.toFixed(2)} €) + quota capitale (${mc.toFixed(2)} €) devono essere uguali alla rata (${mp.toFixed(2)} €)`}
  if(t=='expenses'&&o.period_to<o.period_from)throw'Periodo di competenza non valido'}
 export function split(total,w){const S=sum0(w);if(!S)throw'I valori inseriti non possono essere tutti zero';const raw=w.map(x=>total*x/S),fl=raw.map(Math.floor),rem=total-sum0(fl);
  raw.map((x,i)=>[x-fl[i],i]).sort((a,b)=>b[0]-a[0]).slice(0,rem).forEach(([,i])=>fl[i]++);return fl}

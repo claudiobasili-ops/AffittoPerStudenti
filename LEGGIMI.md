@@ -1,4 +1,4 @@
-# Affitti Studenti 2.2.1 – struttura dei file
+# Affitti Studenti 2.3.0 – struttura dei file
 
 L'app non è più un unico file e **non usa cartelle**: `index.html` carica `main.js`, che importa gli altri moduli (moduli ES del browser, nessuna compilazione).
 **Va servita da un sito** (GitHub Pages, o in locale `python3 -m http.server`): aprendo `index.html` con doppio clic dal disco i moduli non si caricano.
@@ -28,6 +28,7 @@ L'app non è più un unico file e **non usa cartelle**: `index.html` carica `mai
 | `views-attachments.js` | allegati delle Spese |
 | `views-deposits.js` | menù Caparre |
 | `views-report.js` | menù Report e PDF |
+| `views-finance.js` | menù Finanza: rendimento lordo e netto, cash flow, tasso di occupazione, resa per mq |
 | `views-settings.js` | menù Impostazioni (account, sincronizzazione, WhatsApp) |
 
 ## Altre cartelle dello zip (non vanno su GitHub)
@@ -36,6 +37,15 @@ Lo zip ha tre cartelle: `sorgenti` (questi file), `database` e `manuali`.
 
 | File | Contenuto |
 | --- | --- |
-| `001_supabase_init.sql`, `002_tabelle.sql`, `003_whatsapp.sql`, `004_trasferimento_caparra.sql`, `005_cedolare_ricorrenti.sql` | script del database, da eseguire in ordine in Supabase (SQL Editor) |
+| `001_supabase_init.sql`, `002_tabelle.sql`, `003_whatsapp.sql`, `004_trasferimento_caparra.sql`, `005_cedolare_ricorrenti.sql`, `006_investimento_mutuo.sql` | script del database, da eseguire in ordine in Supabase (SQL Editor) |
 | `send-whatsapp-index.ts`, `send-whatsapp-handler.js` | funzione di invio WhatsApp (Edge Function) |
 | `Manuale-Affitti-Studenti-2.2.1.docx`, `Dettaglio-modifica-2.2.1.docx` | manuale e dettaglio della modifica |
+
+## Novità 2.3.0
+
+- Ordinamento con clic sulle intestazioni anche in Spese, Caparre, Contratti, Appartamenti, Camere e Inquilini (clic: crescente, di nuovo: decrescente, terzo clic: ordine predefinito).
+- Spese: filtro «Solo spese inquilini» / «Solo spese locatore»; griglia a tutta larghezza con caratteri più piccoli.
+- Tipologie di spesa: «Rata mutuo», «Manutenzione ordinaria» e «Manutenzione straordinaria». La vecchia «Manutenzione» diventa «Manutenzione ordinaria» all'avvio (le spese collegate restano collegate).
+- Scheda Appartamento: sezioni «Investimento» e «Mutuo» (solo nel modulo, non in griglia). Della rata basta indicare due valori su tre: il terzo è calcolato.
+- Nuovo menù Finanza, con filtri per appartamento e anno.
+- **Con la sincronizzazione attiva eseguire prima `006_investimento_mutuo.sql`** in Supabase.
