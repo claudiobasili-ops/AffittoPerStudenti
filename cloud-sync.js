@@ -16,7 +16,7 @@ const SCH = {apartments:{name:'t',color:'t',address:'t',city:'t',rooms:'n',beds:
   rent_dues:{contract_id:'>contracts',month:'t',amount:'n'},payments:{due_id:'>rent_dues',paid_on:'t',amount:'n',method:'t',notes:'t'},
   expenses:{apartment_id:'>apartments',type_id:'>expense_types',description:'t',amount:'n',landlord_amount:'n',spent_on:'t',period_from:'t',period_to:'t',supplier:'t',notes:'t'},
   allocations:{expense_id:'>expenses',criterion:'t',total_cents:'n'},allocation_shares:{allocation_id:'>allocations',tenant_id:'>tenants',days:'n',weight:'n',calc_cents:'n',final_cents:'n',modified:'b'},
-  share_payments:{share_id:'>allocation_shares',paid_on:'t',amount:'n',method:'t',notes:'t'},deposit_moves:{contract_id:'>contracts',kind:'t',moved_on:'t',amount:'n',method:'t',notes:'t'},
+  share_payments:{share_id:'>allocation_shares',paid_on:'t',amount:'n',method:'t',notes:'t'},deposit_moves:{contract_id:'>contracts',to_contract_id:'>contracts',kind:'t',moved_on:'t',amount:'n',method:'t',notes:'t'},
   documents:{expense_id:'>expenses',filename:'t',mime:'t',size:'n'}};
 const hasData = async()=>{for(const t of TABLES)if(t!='expense_types'&&(await all(t)).length)return true;return false};
 async function pendingCount(){let n=((await gm('tomb'))||[]).length;for(const t of ORDER)n+=(await all(t)).filter(r=>r.dt>0||!r.gid).length;return n}

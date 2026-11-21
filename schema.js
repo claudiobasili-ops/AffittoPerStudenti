@@ -2,7 +2,7 @@
 export const TABLES = ['apartments','rooms','tenants','contracts','rent_dues','payments','expense_types','expenses','allocations','allocation_shares','share_payments','deposit_moves','documents'];
 export const COLS = {apartments:'name,color,address,city,rooms,beds,description,notes',rooms:'apartment_id,name,beds,sqm',tenants:'first_name,last_name,tax_code,phone,email,notes',
  contracts:'tenant_id,apartment_id,room_id,start_date,end_date,monthly_rent,deposit,due_day,notes',payments:'due_id,paid_on,amount,method,notes',
- expenses:'apartment_id,type_id,description,amount,landlord_amount,spent_on,period_from,period_to,supplier,notes',expense_types:'name',share_payments:'share_id,paid_on,amount,method,notes',deposit_moves:'contract_id,kind,moved_on,amount,method,notes'};
+ expenses:'apartment_id,type_id,description,amount,landlord_amount,spent_on,period_from,period_to,supplier,notes',expense_types:'name',share_payments:'share_id,paid_on,amount,method,notes',deposit_moves:'contract_id,kind,moved_on,amount,method,notes,to_contract_id'};
 export const REQ = {apartments:['name','address','city'],rooms:['apartment_id','name'],tenants:['first_name','last_name'],contracts:['tenant_id','apartment_id','start_date','monthly_rent'],
  payments:['due_id','paid_on','amount'],expenses:['apartment_id','spent_on','period_from','period_to'],expense_types:['name'],share_payments:['share_id','paid_on','amount'],deposit_moves:['contract_id','kind','moved_on','amount']};
 export const NUM = ['rooms','beds','sqm','landlord_amount','monthly_rent','deposit','due_day','amount'];

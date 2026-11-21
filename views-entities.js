@@ -11,7 +11,8 @@ import { alloc, collectDlg } from './views-expenses.js';
 
 export async function form(t,F,row={},after){const d=$('#dlg');let h='';
  for(const[k,l,ty='text']of F){let i;
-  if(ty.startsWith('ref:')){const rt=ty.slice(4);i=`<select name=${k}><option value="">—</option>${(await api(rt)).map(x=>`<option value=${x.id} ${x.id==row[k]?'selected':''}>${esc(R[rt](x))}</option>`).join('')}</select>`}
+  if(Array.isArray(ty))i=`<select name=${k}>${ty.map(([v,tx])=>`<option value=${v} ${v==row[k]?'selected':''}>${esc(tx)}</option>`).join('')}</select>`;
+  else if(ty.startsWith('ref:')){const rt=ty.slice(4);i=`<select name=${k}><option value="">—</option>${(await api(rt)).map(x=>`<option value=${x.id} ${x.id==row[k]?'selected':''}>${esc(R[rt](x))}</option>`).join('')}</select>`}
   else if(ty.startsWith('sel:'))i=`<select name=${k}>${ty.slice(4).split(',').map(o=>`<option ${o==row[k]?'selected':''}>${o}</option>`).join('')}</select>`;
   else if(ty=='number')i=`<input name=${k} type=text inputmode=decimal autocomplete=off value="${esc(row[k])}">`;
   else if(ty=='color')i=`<input name=${k} type=color value="${esc(row[k]||(row.id?aptCol(row.id):st.APN))}">`;

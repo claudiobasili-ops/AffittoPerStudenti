@@ -1,4 +1,4 @@
-# Affitti Studenti 2.0.1 – struttura dei file
+# Affitti Studenti 2.1.0 – struttura dei file
 
 L'app non è più un unico file e **non usa cartelle**: `index.html` carica `main.js`, che importa gli altri moduli (moduli ES del browser, nessuna compilazione).
 **Va servita da un sito** (GitHub Pages, o in locale `python3 -m http.server`): aprendo `index.html` con doppio clic dal disco i moduli non si caricano.
@@ -29,3 +29,11 @@ L'app non è più un unico file e **non usa cartelle**: `index.html` carica `mai
 | `views-deposits.js` | menù Caparre |
 | `views-report.js` | menù Report e PDF |
 | `views-settings.js` | menù Impostazioni (account, sincronizzazione, WhatsApp) |
+
+## Altri file dello zip (non vanno su GitHub)
+
+| File | Contenuto |
+| --- | --- |
+| `001_supabase_init.sql`, `002_tabelle.sql`, `003_whatsapp.sql`, `004_trasferimento_caparra.sql` | script del database, da eseguire in ordine in Supabase (SQL Editor) |
+| `send-whatsapp-index.ts`, `send-whatsapp-handler.js` | funzione di invio WhatsApp (Edge Function) |
+| `Manuale-Affitti-Studenti-2.1.0.docx`, `Dettaglio-modifica-2.1.0.docx` | manuale e dettaglio della modifica |
