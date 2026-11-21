@@ -15,15 +15,15 @@ export const put = async(t,o,q)=>{if(!o.gid&&o.id!=null){const old=await P(st.DB
 export const gm = async k=>(await P(st.DB.transaction('meta').objectStore('meta').get(k)))?.v;
 export const sm = (k,v)=>P(st.DB.transaction('meta','readwrite').objectStore('meta').put({k,v}));
 export const touch = async()=>{await sm('lastModified',new Date().toISOString());schedSync()};
-// 2.3.0: «Manutenzione» diventa «Manutenzione ordinaria»; aggiunte «Manutenzione straordinaria» e «Rata mutuo».
+// 2.3.0: «Manutenzione» diventa «Manutenzione ordinaria»; aggiunte «Manutenzione straordinaria» e «Rata mutuo». 2.3.1: aggiunta «IMU».
 // Le modifiche sono marcate come da sincronizzare, così il cloud conosce le nuove tipologie.
 async function migrateTypes(){const T=await all('expense_types'),by=n=>T.find(t=>(t.name||'').trim().toLowerCase()===n.toLowerCase()),old=by('Manutenzione'),ord=by('Manutenzione ordinaria');
  if(old&&!ord)await put('expense_types',{...old,name:'Manutenzione ordinaria'});
  else if(old&&ord){for(const e of(await all('expenses')).filter(e=>e.type_id===old.id))await put('expenses',{...e,type_id:ord.id});
   if(old.gid&&old.rv!=null)await sm('tomb',[...((await gm('tomb'))||[]),{t:'expense_types',gid:old.gid,dt:Date.now()}]);await rawDel('expense_types',old.id);await touch()}
- for(const n of['Manutenzione straordinaria','Rata mutuo'])if(!by(n))await put('expense_types',{name:n})}
+ for(const n of['Manutenzione straordinaria','Rata mutuo','IMU'])if(!by(n))await put('expense_types',{name:n})}
 export async function initDB(){st.DB=await new Promise((ok,ko)=>{const r=indexedDB.open('affitti',4);r.onupgradeneeded=()=>{TABLES.forEach(t=>{if(!r.result.objectStoreNames.contains(t))r.result.createObjectStore(t,{keyPath:'id',autoIncrement:true})});if(!r.result.objectStoreNames.contains('meta'))r.result.createObjectStore('meta',{keyPath:'k'})};r.onsuccess=()=>ok(r.result);r.onerror=()=>ko(r.error)});
- if(!(await all('expense_types')).length)for(const n of['Elettricità','Gas','Acqua','Riscaldamento','Internet','Spese condominiali','Manutenzione ordinaria','Manutenzione straordinaria','Rata mutuo','Tassa rifiuti','Altro'])await put('expense_types',{name:n},1);
+ if(!(await all('expense_types')).length)for(const n of['Elettricità','Gas','Acqua','Riscaldamento','Internet','Spese condominiali','Manutenzione ordinaria','Manutenzione straordinaria','Rata mutuo','IMU','Tassa rifiuti','Altro'])await put('expense_types',{name:n},1);
  await migrateTypes();
  navigator.storage?.persist?.();
  await loadApc();try{const le=await lastExp(),lb=le?Date.parse(le):0;if((await all('apartments')).length&&Date.now()-lb>14*864e5)setTimeout(backupUI,800)}catch{}setTimeout(()=>syncNow().catch(()=>{}),1500)}
