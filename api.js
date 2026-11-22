@@ -16,7 +16,11 @@ async function route(p,o){const m=o.method||'GET',b=o.body,[path,qs]=p.split('?'
   if(m=='DELETE'){await rm(t,+a[1]);return{ok:1}}const x=norm(t,b);if(a[1])x.id=+a[1];await check(t,x);
   if(t=='expenses'&&x.id){const old=await get('expenses',x.id),al=(await all('allocations')).find(q=>q.expense_id===x.id);
    if(old&&al&&(old.amount!==x.amount||old.apartment_id!==x.apartment_id||old.period_from!==x.period_from||old.period_to!==x.period_to)){await rm('allocations',al.id);setTimeout(()=>alert('Spesa modificata: la ripartizione precedente è stata annullata. Rifalla con "Ripartisci".'),300)}}
-  if(t=='expenses'&&!x.id&&x.recurring){const S=series(x);let f=null;for(const s of S){const r=await put(t,s);if(!f)f=r}return f}
+  // Spesa ricorrente con un periodo più lungo di una ripetizione: si crea la serie, sia per una spesa nuova sia modificando una spesa esistente.
+  // La prima ripetizione resta nella spesa salvata (stesso id, allegati compresi); non si duplicano ripetizioni già presenti.
+  if(t=='expenses'&&x.recurring){const S=series(x);if(S.length>1){const al=x.id&&(await all('allocations')).find(q=>q.expense_id===x.id);if(al){await rm('allocations',al.id);setTimeout(()=>alert('La spesa è diventata una serie: la ripartizione precedente è stata annullata. Rifalla con "Ripartisci" sulle ripetizioni.'),300)}
+   const E=await all('expenses'),dup=s=>E.some(e=>e.id!==x.id&&e.recurring&&e.apartment_id===s.apartment_id&&e.type_id===s.type_id&&e.period_from===s.period_from);let f=null;
+   for(let k=0;k<S.length;k++){const s={...S[k]};if(k>0){delete s.id;if(dup(s))continue}const r=await put(t,s);if(!f)f=r}return f}}
   return put(t,x)}
  if(a[0]=='rent_dues'&&m=='DELETE'){await rm('rent_dues',+a[1]);return{ok:1}}
  if(path=='dues')return duesRows(Q.get('month'));

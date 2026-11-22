@@ -1,4 +1,4 @@
-# Affitti Studenti 2.3.1 – struttura dei file
+# Affitti Studenti 2.3.2 – struttura dei file
 
 L'app non è più un unico file e **non usa cartelle**: `index.html` carica `main.js`, che importa gli altri moduli (moduli ES del browser, nessuna compilazione).
 **Va servita da un sito** (GitHub Pages, o in locale `python3 -m http.server`): aprendo `index.html` con doppio clic dal disco i moduli non si caricano.
@@ -39,7 +39,7 @@ Lo zip ha tre cartelle: `sorgenti` (questi file), `database` e `manuali`.
 | --- | --- |
 | `001_supabase_init.sql`, `002_tabelle.sql`, `003_whatsapp.sql`, `004_trasferimento_caparra.sql`, `005_cedolare_ricorrenti.sql`, `006_investimento_mutuo.sql`, `007_date_investimento.sql` | script del database, da eseguire in ordine in Supabase (SQL Editor) |
 | `send-whatsapp-index.ts`, `send-whatsapp-handler.js` | funzione di invio WhatsApp (Edge Function) |
-| `Manuale-Affitti-Studenti-2.3.1.docx`, `Dettaglio-modifica-2.3.1.docx` | manuale e dettaglio della modifica |
+| `Manuale-Affitti-Studenti-2.3.2.docx`, `Dettaglio-modifica-2.3.2.docx` | manuale e dettaglio della modifica |
 
 ## Novità 2.3.0
 
@@ -55,3 +55,7 @@ Lo zip ha tre cartelle: `sorgenti` (questi file), `database` e `manuali`.
 - Scheda Appartamento: ogni voce dell'investimento ha la sua data. Nel menù Finanza una voce conta solo se la data è nell'anno selezionato o prima (senza data: sempre).
 - Nuova tipologia di spesa «IMU»: nel menù Finanza è conteggiata tra le tasse.
 - **Con la sincronizzazione attiva eseguire prima `007_date_investimento.sql`** (e `006_investimento_mutuo.sql`, se non già fatto) in Supabase.
+
+## Novità 2.3.2
+
+- Spese ricorrenti: la serie si crea anche rendendo ricorrente una spesa già inserita (✎ → «Spesa ricorrente» → Salva). Le spese rimaste come riga unica si sistemano riaprendole e salvandole.

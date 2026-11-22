@@ -25,7 +25,7 @@ export async function check(t,o){if(t=='deposit_moves'){if(!['versamento','resti
  if(t=='tenants'&&o.tax_code){o.tax_code=o.tax_code.toUpperCase().trim();if(!/^[A-Z0-9]{16}$/.test(o.tax_code))throw'Codice fiscale non valido (16 caratteri)'}for(const k of REQ[t]||[])if(o[k]==null||Number.isNaN(o[k]))throw'Compila il campo obbligatorio: '+k;
  if(t=='expenses'){o.amount=o.amount??0;o.landlord_amount=o.landlord_amount??0;if(Number.isNaN(o.amount)||Number.isNaN(o.landlord_amount)||o.amount<0||o.landlord_amount<0)throw'Gli importi non possono essere negativi';if(!(o.amount>0)&&!(o.landlord_amount>0))throw'Indica almeno un importo: per inquilini o per il locatore';
   if(o.period_to<o.period_from)throw'La competenza «al» precede la competenza «dal»';
-  if(o.recurring){if(!FREQ[o.frequency])throw'Scegli la frequenza della spesa ricorrente';if(!o.id&&series(o).length>120)throw'Troppe ripetizioni (oltre 120): riduci il periodo di competenza o cambia frequenza'}
+  if(o.recurring){if(!FREQ[o.frequency])throw'Scegli la frequenza della spesa ricorrente';if(series(o).length>120)throw'Troppe ripetizioni (oltre 120): riduci il periodo di competenza o cambia frequenza'}
   else o.frequency=null}
  if((t=='payments'||t=='share_payments'||t=='deposit_moves')&&o.amount<=0)throw'L\'importo deve essere maggiore di zero';
  if(t=='contracts'){if(o.end_date&&o.end_date<o.start_date)throw'La data di uscita precede quella di ingresso';
