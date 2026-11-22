@@ -11,6 +11,7 @@ export const st = {
   curM: thisM(),
   LASTREP: null,
   FY: undefined,
+  FSIM: false,
 };
 
 export const SORT = {dues:null,expenses:null,deposits:null,contracts:null,apartments:null,rooms:null,tenants:null,finance:null,finrooms:null};
