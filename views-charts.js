@@ -13,7 +13,7 @@ function hbars(rows,ser){const mx=Math.max(0,...rows.flatMap(r=>r.v));if(!rows.l
 export async function charts(m){m=m||st.curM;st.curM=m;const D=await api('dashboard?month='+m),r2=v=>Math.round(v*100)/100,sum=k=>r2(D.per.reduce((a,x)=>a+ +x[k],0)),
  ex=sum('expected'),co=sum('collected'),se=sum('expenses'),si=sum('expCollected'),sd=sum('expToCollect'),A=D.asOf,G='#16a34a',R='#dc2626',B='#1d4ed8',
  pc=(a,b)=>b>0?Math.round(a/b*100)+'%':'—',
- tot=[{n:'In ritardo (canoni e spese)',v:A.arrears,c:'#b91c1c'},{n:'Canoni del mese in corso',v:A.current,c:'#f59e0b'},{n:'Spese da incassare (non scadute)',v:A.expDue,c:'#7c3aed'}];
+ tot=[{n:'In ritardo (canoni e spese)',v:A.arrears,c:'#b91c1c'},{n:'Canoni del mese in corso',v:A.current,c:'#f59e0b'},{n:'Spese da incassare (non scadute, entro il '+fd(A.cmEnd)+')',v:A.expDue,c:'#7c3aed'}];
  $('#main').innerHTML=`<h2>Grafici</h2>${mn('cmm',m)}
  <div class=cg><div class=card><h3>Canoni del mese</h3>${donut([{n:'Incassati',v:Math.max(0,co),c:G},{n:'Da incassare',v:Math.max(0,r2(ex-co)),c:R}],pc(co,ex),'incassato','Canoni incassati e da incassare')}</div>
  <div class=card><h3>Spese del mese</h3>${donut([{n:'Incassate',v:si,c:G},{n:'Da incassare',v:sd,c:R},{n:'Non ripartite',v:Math.max(0,r2(se-si-sd)),c:'#9ca3af'}],pc(si,se),'incassato','Spese incassate, da incassare e non ripartite')}</div></div>

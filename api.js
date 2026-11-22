@@ -29,11 +29,14 @@ async function route(p,o){const m=o.method||'GET',b=o.body,[path,qs]=p.split('?'
  if(path=='shares_due')return sharesRows();
  if(path=='deposits')return depositRows();
  if(path=='dashboard'){const mo=Q.get('month'),R=await duesRows(mo),Ex=await all('expenses'),Ap=await all('apartments'),t0=today(),SR=await sharesRows(),AD=await duesRows(),cm=thisM(),r2=v=>Math.round(v*100)/100,alIds=new Set((await all('allocations')).map(a=>a.expense_id)),
-   open=AD.filter(d=>d.remaining>0),arrears=r2(sumk(open.filter(d=>d.month.slice(0,7)<cm),'remaining')),current=r2(sumk(open.filter(d=>d.month.slice(0,7)===cm),'remaining')),expDue=r2(sumk(SR,'remaining')),SRl=SR.filter(s=>s.remaining>0.004&&s.spent_on<t0),expLate=r2(sumk(SRl,'remaining'));
+   open=AD.filter(d=>d.remaining>0),arrears=r2(sumk(open.filter(d=>d.month.slice(0,7)<cm),'remaining')),current=r2(sumk(open.filter(d=>d.month.slice(0,7)===cm),'remaining')),SRl=SR.filter(s=>s.remaining>0.004&&s.spent_on<t0),expLate=r2(sumk(SRl,'remaining')),
+   // spese non scadute: solo quelle con scadenza da oggi alla fine del mese corrente; le successive sono indicate a parte e non entrano nel totale
+   cmEnd=new Date(Date.UTC(+cm.slice(0,4),+cm.slice(5,7),0)).toISOString().slice(0,10),SRf=SR.filter(s=>s.remaining>0.004&&s.spent_on>cmEnd),
+   expDue=r2(sumk(SR.filter(s=>s.remaining>0.004&&s.spent_on>=t0&&s.spent_on<=cmEnd),'remaining')),expFut=r2(sumk(SRf,'remaining'));
   return{per:Ap.sort((x,y)=>x.name.localeCompare(y.name)).map(q=>({id:q.id,name:q.name,expected:sumk(R.filter(d=>d.apt===q.id),'amount'),collected:sumk(R.filter(d=>d.apt===q.id),'paid'),expenses:sumk(Ex.filter(e=>e.apartment_id===q.id&&e.spent_on.slice(0,7)===mo),'amount'),
     landlord:r2(Ex.filter(e=>e.apartment_id===q.id&&e.spent_on.slice(0,7)===mo).reduce((a,e)=>a+(+e.landlord_amount||0),0)),expToCollect:r2(sumk(SR.filter(s=>s.apt===q.id&&s.spent_on.slice(0,7)===mo),'remaining')),expCollected:r2(sumk(SR.filter(s=>s.apt===q.id&&s.spent_on.slice(0,7)===mo),'paid'))})),
    expMonthDue:r2(sumk(SR.filter(s=>s.spent_on.slice(0,7)===mo),'remaining')),shareList:SR.filter(s=>s.remaining>0),unallocated:Ex.filter(e=>e.amount>0&&!alIds.has(e.id)).length,
-   asOf:{arrears:r2(arrears+expLate),arrearsN:open.filter(d=>d.month.slice(0,7)<cm).length,arrearsSN:SRl.length,current,expDue:r2(expDue-expLate),total:r2(arrears+current+expDue)},
+   asOf:{arrears:r2(arrears+expLate),arrearsN:open.filter(d=>d.month.slice(0,7)<cm).length,arrearsSN:SRl.length,current,expDue,cmEnd,expFut,expFutN:SRf.length,total:r2(arrears+expLate+current+expDue)},
    k:{apartments:Ap.length,tenants:new Set((await all('contracts')).filter(c=>c.start_date<=t0&&(!c.end_date||c.end_date>=t0)).map(c=>c.tenant_id)).size}}}
  if(a[0]=='expenses'){const e=await get('expenses',+a[1]);if(!e)throw'Spesa non trovata';
   if(a[2]=='tenants')return involved(e);
