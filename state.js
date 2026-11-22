@@ -12,6 +12,7 @@ export const st = {
   LASTREP: null,
   FY: undefined,
   FSIM: false,
+  FM: 0,
   EM: undefined,
   DACT: false,
   PVC: false,
