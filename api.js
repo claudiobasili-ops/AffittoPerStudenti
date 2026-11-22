@@ -28,7 +28,8 @@ async function route(p,o){const m=o.method||'GET',b=o.body,[path,qs]=p.split('?'
   for(const c of await all('contracts'))if(c.start_date<=last&&(!c.end_date||c.end_date>=mo)&&!D.some(d=>d.contract_id===c.id&&d.month===mo)){await put('rent_dues',{contract_id:c.id,month:mo,amount:c.monthly_rent});n++}return{created:n}}
  if(path=='shares_due')return sharesRows();
  if(path=='deposits')return depositRows();
- if(path=='dashboard'){const mo=Q.get('month'),R=await duesRows(mo),Ex=await all('expenses'),Ap=await all('apartments'),t0=today(),SR=await sharesRows(),AD=await duesRows(),cm=thisM(),r2=v=>Math.round(v*100)/100,alIds=new Set((await all('allocations')).map(a=>a.expense_id)),
+ // Dashboard: gli appartamenti individuati per l'acquisto (non ancora di proprietà) non sono conteggiati
+ if(path=='dashboard'){const mo=Q.get('month'),R=await duesRows(mo),Ex=await all('expenses'),Ap=(await all('apartments')).filter(a=>!a.prospect),t0=today(),SR=await sharesRows(),AD=await duesRows(),cm=thisM(),r2=v=>Math.round(v*100)/100,alIds=new Set((await all('allocations')).map(a=>a.expense_id)),
    open=AD.filter(d=>d.remaining>0),arrears=r2(sumk(open.filter(d=>d.month.slice(0,7)<cm),'remaining')),current=r2(sumk(open.filter(d=>d.month.slice(0,7)===cm),'remaining')),SRl=SR.filter(s=>s.remaining>0.004&&s.spent_on<t0),expLate=r2(sumk(SRl,'remaining')),
    // spese non scadute: solo quelle con scadenza da oggi alla fine del mese corrente; le successive sono indicate a parte e non entrano nel totale
    cmEnd=new Date(Date.UTC(+cm.slice(0,4),+cm.slice(5,7),0)).toISOString().slice(0,10),SRf=SR.filter(s=>s.remaining>0.004&&s.spent_on>cmEnd),

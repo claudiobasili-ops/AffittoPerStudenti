@@ -10,7 +10,7 @@ import { $, esc, fdt, stamp } from './util.js';
 import { cloudView } from './views-settings.js';
 
 const ORDER = ['apartments','expense_types','tenants','rooms','contracts','rent_dues','payments','expenses','allocations','allocation_shares','share_payments','deposit_moves','documents'];
-const SCH = {apartments:{name:'t',color:'t',address:'t',city:'t',rooms:'n',beds:'n',description:'t',notes:'t',purchase_price:'n',purchase_date:'t',purchase_costs:'n',purchase_costs_date:'t',renovation:'n',renovation_date:'t',mortgage_payment:'n',mortgage_interest:'n',mortgage_principal:'n',own_capital:'n'},expense_types:{name:'t'},
+const SCH = {apartments:{name:'t',color:'t',address:'t',city:'t',rooms:'n',beds:'n',description:'t',notes:'t',purchase_price:'n',purchase_date:'t',purchase_costs:'n',purchase_costs_date:'t',renovation:'n',renovation_date:'t',mortgage_payment:'n',mortgage_interest:'n',mortgage_principal:'n',own_capital:'n',prospect:'n',income_monthly:'n',income_start:'t',income_months:'n'},expense_types:{name:'t'},
   tenants:{first_name:'t',last_name:'t',tax_code:'t',phone:'t',email:'t',notes:'t'},rooms:{apartment_id:'>apartments',name:'t',beds:'n',sqm:'n'},
   contracts:{tenant_id:'>tenants',apartment_id:'>apartments',room_id:'>rooms',start_date:'t',end_date:'t',monthly_rent:'n',deposit:'n',due_day:'n',cedolare:'n',notes:'t'},
   rent_dues:{contract_id:'>contracts',month:'t',amount:'n'},payments:{due_id:'>rent_dues',paid_on:'t',amount:'n',method:'t',notes:'t'},

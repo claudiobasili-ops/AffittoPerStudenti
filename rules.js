@@ -38,6 +38,8 @@ export async function check(t,o){if(t=='deposit_moves'){if(!['versamento','resti
    if(moved&&ap.rooms!=null&&oth.length+1>ap.rooms)throw`L’appartamento “${ap.name}” ha ${ap.rooms} camere: ne risultano già censite ${oth.length}`;
    const bt=sum0(oth.map(r=>r.beds||0))+(o.beds||0);if((moved||(old.beds||0)!==(o.beds||0))&&ap.beds!=null&&bt>ap.beds)throw`I posti letto delle camere (${bt}) supererebbero quelli dell’appartamento “${ap.name}” (${ap.beds})`}}
  if(t=='apartments'){for(const k of['purchase_price','purchase_costs','renovation','mortgage_payment','mortgage_interest','mortgage_principal','own_capital'])if(Number.isNaN(o[k])||o[k]<0)throw'Gli importi di investimento e mutuo non possono essere negativi';
+  o.prospect=o.prospect?1:0;if(Number.isNaN(o.income_monthly)||o.income_monthly<0)throw'La rendita netta mensile non può essere negativa';
+  if(o.income_months!=null&&(Number.isNaN(o.income_months)||!Number.isInteger(o.income_months)||o.income_months<1||o.income_months>12))throw'Il numero di mesi della rendita deve essere un numero intero da 1 a 12';
   const r2=v=>Math.round(v*100)/100,mp=o.mortgage_payment,mi=o.mortgage_interest,mc=o.mortgage_principal;
   if(mp==null&&mi!=null&&mc!=null)o.mortgage_payment=r2(mi+mc);
   else if(mp!=null&&mi!=null&&mc==null){if(mi>mp+.005)throw'La quota interessi supera la rata del mutuo';o.mortgage_principal=r2(mp-mi)}
