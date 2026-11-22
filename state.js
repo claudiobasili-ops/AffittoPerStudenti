@@ -13,6 +13,8 @@ export const st = {
   FY: undefined,
   FSIM: false,
   EM: undefined,
+  DACT: false,
+  PVC: false,
 };
 
 export const SORT = {dues:null,expenses:null,deposits:null,contracts:null,apartments:null,rooms:null,tenants:null,finance:null,finrooms:null};

@@ -1,6 +1,6 @@
 // Menù Caparre
 import { api } from './api.js';
-import { SORT } from './state.js';
+import { SORT, st } from './state.js';
 import { aptSel, aptTag, bdg, sortBar, sortWire, srt, thS, tnTag } from './ui.js';
 import { $, FAP, esc, eur, fd, sumk, today } from './util.js';
 import { filt, form } from './views-entities.js';
@@ -20,10 +20,12 @@ async function depositDlg(id,after){const d=$('#dlg'),DR=await api('deposits'),r
   else if(n)form('deposit_moves',[['moved_on',n=='versamento'?'Data versamento':'Data restituzione','date'],['amount','Importo €','number'],['method','Modalità','sel:bonifico,contanti,carta,altro'],['notes','Note']],{contract_id:id,kind:n,amount:ev.target.dataset.a,moved_on:today()},()=>depositDlg(id,after))}}
 const RK={'Da restituire':0,'Da versare':1,'Versata in parte':2,'Versata':3,'Da trasferimento':4,'Restituita in parte':5,'Trasferita in parte':6,'Restituita':7,'Trasferita':8};
 const DCOLS=[['tenant','Inquilino'],['apartment','Appartamento'],['start','Contratto'],['deposit','Caparra'],['paid','Versata'],['returned','Restituita'],['held','In deposito'],['status','Stato']];
-export async function depositsView(){const D0=await api('deposits'),AP=await api('apartments'),fa=FAP.deposits,D=srt(fa?D0.filter(d=>d.apt==fa):D0,SORT.deposits,(d,k)=>k=='status'?RK[d.status]??99:d[k]??'');
- $('#main').innerHTML=`<h2>Caparre</h2>${aptSel(AP,fa)} ${sortBar('deposits',DCOLS)}<input id=q placeholder="Cerca inquilino…"><div class=cards style="margin:10px 0"><div class=card>Da versare<b>${eur(sumk(D,'toPay'))}</b></div><div class=card>In deposito<b>${eur(sumk(D,'held'))}</b></div><div class=card>Da restituire (contratti conclusi)<b>${eur(sumk(D.filter(d=>d.status=='Da restituire'),'held'))}</b></div></div>
+// Contratto non ancora concluso (in corso o futuro) oppure concluso con caparra da restituire
+const actOrDue=d=>!d.end||d.end>=today()||d.status=='Da restituire';
+export async function depositsView(){const D0=await api('deposits'),AP=await api('apartments'),fa=FAP.deposits,D=srt((fa?D0.filter(d=>d.apt==fa):D0).filter(d=>!st.DACT||actOrDue(d)),SORT.deposits,(d,k)=>k=='status'?RK[d.status]??99:d[k]??'');
+ $('#main').innerHTML=`<h2>Caparre</h2>${aptSel(AP,fa)} <label class="ck inl"><input type=checkbox id=dact${st.DACT?' checked':''}>Solo contratti attivi e conclusi da restituire</label> ${sortBar('deposits',DCOLS)}<input id=q placeholder="Cerca inquilino…"><div class=cards style="margin:10px 0"><div class=card>Da versare<b>${eur(sumk(D,'toPay'))}</b></div><div class=card>In deposito<b>${eur(sumk(D,'held'))}</b></div><div class=card>Da restituire (contratti conclusi)<b>${eur(sumk(D.filter(d=>d.status=='Da restituire'),'held'))}</b></div></div>
  <div class=sc><table class=rt><tr>${DCOLS.map(([k,l])=>thS('deposits',k,l)).join('')}<th></tr>
  ${D.map(r=>`<tr data-f data-c=${r.id} class="${r.status=='Da restituire'?'late':''}"><td data-l="Inquilino">${tnTag(r.tenant)}<td data-l="Appartamento">${aptTag(r.apartment,r.apt)}<td data-l="Contratto">${fd(r.start)} – ${r.end?fd(r.end):'in corso'}<td data-l="Caparra">${eur(r.deposit)}<td data-l="Versata">${eur(r.paid)}<td data-l="Restituita">${eur(r.returned)}<td data-l="In deposito">${eur(r.held)}<td data-l="Stato">${bdg(r.status,OK.includes(r.status))}<td class=act><button>Gestisci</button></tr>`).join('')}</table></div>
- ${D.length?'':'<p>Nessuna caparra: inserisci l\'importo nel campo “Caparra €” del contratto.</p>'}`;filt();sortWire('deposits',depositsView);
- $('#fa').onchange=e=>{FAP.deposits=e.target.value;depositsView()};
+ ${D.length?'':D0.length?'<p>Nessuna caparra con i filtri scelti.</p>':'<p>Nessuna caparra: inserisci l\'importo nel campo “Caparra €” del contratto.</p>'}`;filt();sortWire('deposits',depositsView);
+ $('#fa').onchange=e=>{FAP.deposits=e.target.value;depositsView()};$('#dact').onchange=e=>{st.DACT=e.target.checked;depositsView()};
  $('#main').querySelector('table').onclick=e=>{const tr=e.target.closest('tr[data-c]');if(tr&&e.target.tagName=='BUTTON')depositDlg(+tr.dataset.c,depositsView)}}
