@@ -3,7 +3,7 @@ export const $ = s=>document.querySelector(s);
 export const esc = v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export const eur = v=>Number(v).toLocaleString('it-IT',{style:'currency',currency:'EUR'});
 export const thisM = ()=>new Date().toISOString().slice(0,7);
-export const APP_VERSION = '2.3.18';
+export const APP_VERSION = '2.3.19';
 export const sum0 = a=>a.reduce((s,x)=>s+x,0);
 export const sumk = (a,k)=>a.reduce((s,x)=>s+x[k],0);
 export const today = ()=>new Date().toISOString().slice(0,10);
