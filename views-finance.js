@@ -22,8 +22,9 @@ const simAmt = s=>KS.reduce((x,k)=>x+Math.abs(s[k]),0)>.005;
 // (rata mutuo e IMU comprese) già registrate per il periodo o, se mancano, quelle dello stesso mese dell'anno precedente.
 // Ogni importo simulato è sommato anche in .s, per distinguerlo da quelli reali.
 export const period = (Y,M)=>{M = +M||1;return Array.from({length:12},(_,i)=>{const y = Y+Math.floor((M-1+i)/12),m = (M-1+i)%12;return{y,m,mo:`${y}-${pad(m+1)}`,ms:`${y}-${pad(m+1)}-01`,me:lastDay(y,m)}})};
-export async function finData(Y,sim,M){
- const [Ap,Ro,C,D,Pa,E,Ty] = await Promise.all(['apartments','rooms','contracts','rent_dues','payments','expenses','expense_types'].map(all));
+// ind = comprende gli appartamenti individuati per l'acquisto (solo in simulazione); senza, sono esclusi
+export async function finData(Y,sim,M,ind){ind = !!(sim&&ind);
+ const [Ap0,Ro,C,D,Pa,E,Ty] = await Promise.all(['apartments','rooms','contracts','rent_dues','payments','expenses','expense_types'].map(all)),Ap = Ap0.filter(a=>!+a.prospect||ind);
  const P = period(Y,M), ys = P[0].ms, ye = P[11].me, idx = d=>{const y = +String(d).slice(0,4),m = +String(d).slice(5,7)-1,k = (y-P[0].y)*12+m-P[0].m;return k>=0&&k<12?k:-1};
  const t0 = today(), cur = ys<=t0&&t0<=ye, past = ye<t0, pe = cur?t0:ye, pm = pe.slice(0,7), lastI = idx(pe),
   ci = past?11:cur?lastI:-1, realEnd = past?ye:cur?t0:'';   // in simulazione: ultimo mese reale e ultimo giorno reale
@@ -34,18 +35,18 @@ export async function finData(Y,sim,M){
  for(const p of Pa)paid.set(p.due_id,(paid.get(p.due_id)||0)+n0(p.amount));
  const A = new Map(Ap.map(a=>{const inv = (upTo(a.purchase_date)?n0(a.purchase_price):0)+(upTo(a.purchase_costs_date)?n0(a.purchase_costs):0)+(upTo(a.renovation_date)?n0(a.renovation):0),
    invOut = [a.purchase_date,a.purchase_costs_date,a.renovation_date].some((d,j)=>d&&!upTo(d)&&n0([a.purchase_price,a.purchase_costs,a.renovation][j])>0);
-  return [a.id,{id:a.id,name:a.name,inv,invOut,imu:0,own:upTo(a.purchase_date)?n0(a.own_capital):0,mp:n0(a.mortgage_payment),mi:n0(a.mortgage_interest),rent:0,...blank(),s:blank(),mortEst:false,occSim:false,cap:0,occ:0,sqm:0,m:blankM()}]}));
+  return [a.id,{id:a.id,name:a.name,pros:!!+a.prospect,inc:n0(a.income_monthly),incStart:a.income_start||'',incN:n0(a.income_months)||12,pdate:a.purchase_date||'',inv,invOut,imu:0,own:upTo(a.purchase_date)?n0(a.own_capital):0,mp:n0(a.mortgage_payment),mi:n0(a.mortgage_interest),rent:0,...blank(),s:blank(),mortEst:false,occSim:false,cap:0,occ:0,sqm:0,m:blankM()}]}));
  // Somma un importo nel mese i dell'appartamento a (k: coll, exp, tax, mort); s = importo simulato
  const add = (a,i,k,v,s)=>{if(!v)return;a[k] += v;a.m[i][k] += v;if(s){a.s[k] += v;a.m[i].s[k] += v}};
  const RM = new Map(Ro.map(r=>[r.id,{id:r.id,apt:r.apartment_id,name:r.name,beds:Math.max(1,n0(r.beds)||1),sqm:n0(r.sqm),rent:0,occ:0,cap:0}]));
  // Canoni annui: canoni generati del periodo + mesi di contratto non ancora generati (al canone del contratto)
  const seen = new Set();
- for(const d of D){const i = idx(d.month);if(i<0)continue;const c = C.find(x=>x.id===d.contract_id),a = c&&A.get(c.apartment_id);if(!a)continue;
+ for(const d of D){const i = idx(d.month);if(i<0)continue;const c = C.find(x=>x.id===d.contract_id),a = c&&A.get(c.apartment_id);if(!a||a.pros)continue;
   const mo = d.month.slice(0,7),ced = n0(c.cedolare)/100,amt = n0(d.amount);seen.add(c.id+'|'+mo);a.rent += amt;if(c.room_id&&RM.has(c.room_id))RM.get(c.room_id).rent += amt;
   const p = paid.get(d.id)||0;
   if(mo<=pm||sim){add(a,i,'coll',p);add(a,i,'tax',p*ced)}
   if(sim&&amt-p>.005){add(a,i,'coll',amt-p,1);add(a,i,'tax',(amt-p)*ced,1)}}
- for(const c of C){const a = A.get(c.apartment_id);if(!a)continue;
+ for(const c of C){const a = A.get(c.apartment_id);if(!a||a.pros)continue;
   for(let i=0;i<12;i++){const {ms,me,mo} = P[i];if(seen.has(c.id+'|'+mo)||c.start_date>me||(c.end_date&&c.end_date<ms))continue;
    const amt = n0(c.monthly_rent);a.rent += amt;if(c.room_id&&RM.has(c.room_id))RM.get(c.room_id).rent += amt;
    if(sim){add(a,i,'coll',amt,1);add(a,i,'tax',amt*n0(c.cedolare)/100,1)}}}
@@ -53,7 +54,7 @@ export async function finData(Y,sim,M){
  const hasMort = new Set(), put = (a,i,e,s)=>{const k = kind(e),v = val(e);if(k=='imu'){a.imu += v;add(a,i,'tax',v,s)}else add(a,i,k,v,s)};
  const reg = new Map(), prev = new Map();   // spese dei mesi futuri (simulazione): registrate / anno precedente, per appartamento|mese|tipologia
  const bucket = (M,e,i)=>{const key = e.apartment_id+'|'+i+'|'+e.type_id;if(!M.has(key))M.set(key,[]);M.get(key).push(e)};
- for(const e of E){const a = A.get(e.apartment_id);if(!a||!e.spent_on)continue;const i = idx(e.spent_on);
+ for(const e of E){const a = A.get(e.apartment_id);if(!a||a.pros||!e.spent_on)continue;const i = idx(e.spent_on);
   if(sim){const ip = idx((+e.spent_on.slice(0,4)+1)+e.spent_on.slice(4));if(ip>ci)bucket(prev,e,ip);if(i<0)continue;   // stesso mese dell'anno precedente
    if(e.spent_on<=realEnd){put(a,i,e,0);if(mortT.has(e.type_id))hasMort.add(a.id)}
    else if(i<=ci)put(a,i,e,1);          // resto del mese corrente: spese già registrate, non ancora scadute
@@ -62,10 +63,10 @@ export async function finData(Y,sim,M){
  if(sim){const keys = new Set([...reg.keys(),...prev.keys()]),mortFut = new Set();
   for(const key of keys){const [aid,i] = key.split('|').map(Number),a = A.get(aid),L = reg.get(key)||prev.get(key);for(const e of L){put(a,i,e,1);if(mortT.has(e.type_id))mortFut.add(aid+'|'+i)}}
   // Rata della scheda: nei mesi reali se non ci sono rate registrate (come senza simulazione), nei mesi futuri se non ce n'è una registrata o dell'anno precedente
-  for(const a of A.values())if(a.mp>0){if(!hasMort.has(a.id))for(let i=0;i<=ci;i++){add(a,i,'mort',a.mp);a.mortEst = true}
+  for(const a of A.values())if(a.mp>0&&!a.pros){if(!hasMort.has(a.id))for(let i=0;i<=ci;i++){add(a,i,'mort',a.mp);a.mortEst = true}
    for(let i=ci+1;i<12;i++)if(!mortFut.has(a.id+'|'+i)){add(a,i,'mort',a.mp,1);a.mortEst = true}}}
  // Senza rate registrate si usa la rata mensile della scheda appartamento per i mesi trascorsi
- else for(const a of A.values())if(!hasMort.has(a.id)&&a.mp>0){a.mortEst = true;for(let i=0;i<=lastI;i++)add(a,i,'mort',a.mp)}
+ else for(const a of A.values())if(!hasMort.has(a.id)&&a.mp>0&&!a.pros){a.mortEst = true;for(let i=0;i<=lastI;i++)add(a,i,'mort',a.mp)}
  // Tasso di occupazione per posti letto: giorni occupati ÷ (posti letto × giorni del periodo); in simulazione il periodo intero
  const oe = sim?ye:pe,nd = days(ys,oe), occOf = c=>days(c.start_date>ys?c.start_date:ys,c.end_date&&c.end_date<oe?c.end_date:oe);
  for(const r of RM.values()){r.cap = r.beds*nd;r.occ = Math.min(r.cap,C.filter(c=>c.room_id===r.id).reduce((s,c)=>s+occOf(c),0))}
@@ -73,6 +74,13 @@ export async function finData(Y,sim,M){
   a.sqm = rs.reduce((s,r)=>s+r.sqm,0);a.occSim = sim&&oe>realEnd&&cs.length>0;
   if(rs.length){a.cap = rs.reduce((s,r)=>s+r.cap,0);a.occ = Math.min(a.cap,rs.reduce((s,r)=>s+r.occ,0)+cs.filter(c=>!c.room_id||!RM.has(c.room_id)).reduce((s,c)=>s+occOf(c),0))}
   else{a.cap = Math.max(1,n0(ap.beds)||n0(ap.rooms)||1)*nd;a.occ = Math.min(a.cap,cs.reduce((s,c)=>s+occOf(c),0))}}
+ // Appartamenti individuati per l'acquisto (solo in simulazione): rendita netta della scheda nei mesi previsti (ogni anno incN mesi dal mese di inizio,
+ // mai prima della data di inizio), senza tasse; rata del mutuo dal mese di acquisto (o di inizio rendita, o tutto il periodo); posti letto tutti occupati nei mesi con rendita
+ for(const a of A.values()){if(!a.pros)continue;const sm = a.incStart?+a.incStart.slice(5,7)-1:0,s0 = a.incStart.slice(0,7),m0 = (a.pdate||a.incStart).slice(0,7),
+  rs = Ro.filter(r=>r.apartment_id===a.id),ap = Ap.find(x=>x.id===a.id),beds = rs.reduce((s,r)=>s+Math.max(1,n0(r.beds)||1),0)||Math.max(1,n0(ap.beds)||n0(ap.rooms)||1);
+  a.cap = beds*nd;a.occ = 0;a.occSim = true;a.mortEst = a.mp>0;
+  P.forEach((q,i)=>{const on = a.inc>0&&(!s0||q.mo>=s0)&&(q.m-sm+12)%12<a.incN;if(on){add(a,i,'coll',a.inc,1);a.rent += a.inc;a.occ += beds*days(q.ms>ys?q.ms:ys,q.me<oe?q.me:oe)}
+   if(a.mp>0&&(!m0||q.mo>=m0))add(a,i,'mort',a.mp,1)})}
  // Rientro dell'investimento: capitale da recuperare ÷ cash flow annuo. Con il mutuo il cash flow toglie già le rate,
  // quindi si recupera solo il capitale proprio (anticipo); senza mutuo l'investimento totale. Periodo non concluso: cash flow riportato a 12 mesi.
  const mc = sim?12:Math.max(1,lastI+1);
@@ -80,7 +88,7 @@ export async function finData(Y,sim,M){
   a.mInt = a.mp>0&&a.mi>0?a.mort*a.mi/a.mp:null;a.m.forEach(m=>{m.cf = m.coll-m.exp-m.tax-m.mort;m.sim = simAmt(m.s)});a.simAny = simAmt(a.s);return a};
  const L = [...A.values()].map(kpi).sort((x,y)=>x.name.localeCompare(y.name,'it'));
  for(const r of RM.values()){r.occP = div(r.occ,r.cap);r.psqm = r.sqm>0?r.rent/r.sqm:null;r.aname = A.get(r.apt)?.name||''}
- return {Y,M:+M||1,P,ys,ye,pe,sim:!!sim,partial:cur,future:ys>t0,lastI,ci,mc,A:L,R:[...RM.values()].filter(r=>A.has(r.apt))}}
+ return {Y,M:+M||1,P,ys,ye,pe,sim:!!sim,partial:cur,future:ys>t0,lastI,ci,mc,A:L,R:[...RM.values()].filter(r=>A.has(r.apt)&&!A.get(r.apt).pros),ind}}
 
 // Somma degli appartamenti scelti; i rendimenti usano solo quelli con l'investimento indicato
 function total(L){const T = {rent:0,...blank(),s:blank(),imu:0,invOut:L.some(a=>a.invOut),cap:0,occ:0,sqm:0,inv:0,own:0,mInt:null,mortEst:L.some(a=>a.mortEst),occSim:L.some(a=>a.occSim),m:blankM()},I = {rent:0,netN:0,inv:0},O = {cf:0,own:0};
@@ -131,8 +139,9 @@ const sv = (x,k)=>x[k]==null?-1e15:x[k];
 const SIMLBL = {coll:'canoni',exp:'spese',tax:'tasse',mort:'mutuo'};
 
 const MESI = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
-export async function finance(){const cy = +today().slice(0,4),Y = st.FY||cy;st.FY = Y;const fa = FAP.finance,sim = !!st.FSIM,FM = +st.FM||0;
- const [Ap,C,E] = await Promise.all(['apartments','contracts','expenses'].map(all)),F = await finData(Y,sim,FM),L = fa?F.A.filter(a=>a.id==fa):F.A,T = total(L),
+export async function finance(){const cy = +today().slice(0,4),Y = st.FY||cy;st.FY = Y;const sim = !!st.FSIM,FM = +st.FM||0,ind = sim&&!!st.FIND;
+ const [Ap0,C,E] = await Promise.all(['apartments','contracts','expenses'].map(all)),nPros = Ap0.filter(a=>+a.prospect).length,Ap = Ap0.filter(a=>!+a.prospect||ind),
+  fa = Ap.some(a=>a.id==FAP.finance)?FAP.finance:'',F = await finData(Y,sim,FM,ind),L = fa?F.A.filter(a=>a.id==fa):F.A,T = total(L),
   R = F.R.filter(r=>!fa||r.apt==fa),y0 = Math.min(cy,...C.map(c=>+c.start_date.slice(0,4)).filter(Boolean),...E.map(e=>+String(e.spent_on).slice(0,4)).filter(Boolean),...Ap.flatMap(a=>[a.purchase_date,a.purchase_costs_date,a.renovation_date]).map(d=>+String(d||'').slice(0,4)).filter(Boolean)),
   years = [];for(let y=cy+1;y>=y0;y--)years.push(y);
  const AL = srt(L,SORT.finance,(a,k)=>k=='name'?a.name:sv(a,k)),RL = srt(R.slice().sort((a,b)=>a.aname.localeCompare(b.aname,'it')||String(a.name).localeCompare(String(b.name),'it',{numeric:true})),SORT.finrooms,(r,k)=>k=='aname'||k=='name'?r[k]:sv(r,k));
@@ -142,9 +151,9 @@ export async function finance(){const cy = +today().slice(0,4),Y = st.FY||cy;st.
   mortSub = (T.mortEst?'stimata dalla rata in scheda':'dalle spese «Rata mutuo»')+(T.mInt!=null?' · interessi ~'+eur(r2(T.mInt)):''),
   S = k=>T.s[k]>.005, sCf = T.simAny, sc = (a,k)=>a.s[k]>.005?' class=sim':'';
  $('#main').innerHTML=`<div class=fin><h2>Finanza</h2>${aptSel(Ap.slice().sort((a,b)=>a.name.localeCompare(b.name,'it')),fa)} <span class=mnav><button type=button class=sec id=fyp aria-label="Anno precedente">‹</button><select id=fy aria-label=Anno>${years.map(y=>`<option${y==Y?' selected':''}>${y}</option>`).join('')}</select><button type=button class=sec id=fyn aria-label="Anno successivo">›</button></span>
- <select id=fmo aria-label="Mese di inizio del periodo"><option value=0>Anno solare</option>${MESI.map((n,i)=>`<option value=${i+1}${FM==i+1?' selected':''}>12 mesi da ${n.toLowerCase()}</option>`).join('')}</select> <button type=button id=fsim class="${sim?'simon':'sec'}" aria-pressed=${sim}>${sim?'✓ Simulazione attiva':'Simulazione'}</button>
+ <select id=fmo aria-label="Mese di inizio del periodo"><option value=0>Anno solare</option>${MESI.map((n,i)=>`<option value=${i+1}${FM==i+1?' selected':''}>12 mesi da ${n.toLowerCase()}</option>`).join('')}</select> <button type=button id=fsim class="${sim?'simon':'sec'}" aria-pressed=${sim}>${sim?'✓ Simulazione attiva':'Simulazione'}</button>${sim&&nPros?` <button type=button id=find class="${ind?'simon':'sec'}" aria-pressed=${ind}>${ind?'✓ ':''}+ Appartamenti individuati (${nPros})</button>`:''}
  <p class=mut style="margin:6px 0 0">Periodo: ${per}${fa?'':' · tutti gli appartamenti'}</p>
- ${sim?`<p class="card simb">Simulazione: tutti i canoni del periodo sono considerati incassati (con la cedolare); ${F.ci>=11?'il periodo è concluso, quindi si simulano solo i canoni non ancora pagati':`per ${F.ci<0?'tutti i mesi':F.ci==10?'il mese di '+my(F.P[11]):'i mesi da '+my(F.P[F.ci+1])+' '+ad(my(F.P[11]))} le spese del locatore, l’IMU e la rata del mutuo sono quelle già registrate per il periodo o, se mancano, quelle dello stesso mese dell’anno precedente`}. <span class=sim style="font-weight:700">I valori in viola</span> e le barre a righe comprendono importi simulati.</p>`:''}
+ ${sim?`<p class="card simb">Simulazione: tutti i canoni del periodo sono considerati incassati (con la cedolare); ${F.ci>=11?'il periodo è concluso, quindi si simulano solo i canoni non ancora pagati':`per ${F.ci<0?'tutti i mesi':F.ci==10?'il mese di '+my(F.P[11]):'i mesi da '+my(F.P[F.ci+1])+' '+ad(my(F.P[11]))} le spese del locatore, l’IMU e la rata del mutuo sono quelle già registrate per il periodo o, se mancano, quelle dello stesso mese dell’anno precedente`}. ${ind?' Comprende gli <span style="font-weight:700">appartamenti individuati per l’acquisto</span>: rendita netta della scheda nei mesi previsti (senza tasse) e rata del mutuo dal mese di acquisto.':''} <span class=sim style="font-weight:700">I valori in viola</span> e le barre a righe comprendono importi simulati.</p>`:''}
  ${noInv&&T.invOut?`<p class=card style="margin-top:10px">Nel periodo scelto nessuna voce dell’investimento risulta ancora sostenuta: le date indicate nella scheda dell’appartamento sono successive.</p>`:noInv?'<p class=card style="margin-top:10px">Per calcolare i rendimenti inserisci l’<b>investimento</b> (prezzo di acquisto, costi di acquisto, ristrutturazione e arredi) nella scheda dell’appartamento, menù <b>Appartamenti</b> → ✎.</p>':''}
  <div class=cards>${card('Rendimento lordo',pct(T.gross),'canoni annui ÷ investimento')}${card('Rendimento netto',pct(T.net),'(incassati − spese − tasse) ÷ investimento',T.net<0,sCf)}${card('Cash flow',eur(r2(T.cf)),'incassi − costi − rata mutuo',T.cf<0,sCf)}${card('Tasso di occupazione',pct(T.occP),'posti letto occupati',0,T.occSim)}${card('Resa per mq',T.psqm==null?'—':eur(r2(T.psqm)),'canoni annui ÷ mq camere')}${T.own>0?card('Rendimento capitale proprio',pct(T.coc),'cash flow ÷ capitale proprio',T.coc<0,sCf):''}${card('Rientro dell’investimento',payTxt(T),T.rc>0?[(T.rcFin>0&&T.rcFin<T.rc-.005?`anticipo ${eur(r2(T.rcFin))} + investimento ${eur(r2(T.rc-T.rcFin))}`:T.rcFin>0?`anticipo ${eur(r2(T.rc))}`:`investimento ${eur(r2(T.rc))}`)+` ÷ cash flow ${eur(r2(T.cfY))} l’anno`,F.mc<12?`cash flow riportato a 12 mesi (calcolato su ${F.mc})`:'',T.payMiss?'immobili con mutuo senza anticipo esclusi':''].filter(Boolean).join(' · '):T.payMiss?'indica il capitale proprio versato (anticipo) degli immobili con mutuo':'indica l’investimento nella scheda appartamento',T.payNeg,sCf)}</div>
  <div class=cards>${card('Investimento',eur(r2(T.inv)),[`voci con data entro il ${fd(F.ye)}`,T.invOut?'alcune voci sono successive':'',T.partInv?'alcuni appartamenti senza investimento':''].filter(Boolean).join(' · '))}${card('Canoni annui',eur(r2(T.rent)),'dovuti da contratti')}${card('Canoni incassati',eur(r2(T.coll)),S('coll')?'di cui simulati '+eur(r2(T.s.coll)):'',0,S('coll'))}${card('Spese locatore',eur(r2(T.exp)),'escluse rata mutuo e IMU'+(S('exp')?' · simulate '+eur(r2(T.s.exp)):''),0,S('exp'))}${card('Tasse',eur(r2(T.tax)),'cedolare secca sui canoni incassati'+(T.imu>0?' + IMU '+eur(r2(T.imu)):' + IMU')+(S('tax')?' · simulate '+eur(r2(T.s.tax)):''),0,S('tax'))}${card('Rata mutuo',eur(r2(T.mort)),[T.mort>0?mortSub:'',S('mort')?'simulata '+eur(r2(T.s.mort)):''].filter(Boolean).join(' · '),0,S('mort'))}</div>
@@ -152,7 +161,7 @@ export async function finance(){const cy = +today().slice(0,4),Y = st.FY||cy;st.
   <details style="margin-top:6px"><summary><small>Dati mensili</small></summary><div class=sc><table><tr><th>Mese<th>Incassi<th>Spese<th>Tasse<th>Mutuo<th>Cash flow${sim?'<th>Dati':''}</tr>${T.m.map((m,i)=>`<tr${m.sim?' class=sim':''}><td>${my(F.P[i])}<td>${eur(r2(m.coll))}<td>${eur(r2(m.exp))}<td>${eur(r2(m.tax))}<td>${eur(r2(m.mort))}<td><b>${eur(r2(m.cf))}</b>${sim?`<td>${m.sim?'simulati: '+KS.filter(k=>m.s[k]>.005).map(k=>SIMLBL[k]).join(', '):'reali'}`:''}</tr>`).join('')}</table></div></details></div>
  ${!fa&&L.length>1?`<div class=card><h3>Rendimenti per appartamento</h3>${yieldChart(L)}</div>`:''}</div>
  <h3 style="margin:18px 0 0">Per appartamento</h3>${sortBar('finance',ACOLS)}<div class=sc><table class=rt><tr>${ACOLS.map(([k,l])=>thS('finance',k,l)).join('')}</tr>
- ${AL.map(a=>`<tr><td data-l="Appartamento">${aptTag(a.name,a.id)}<td data-l="Investimento">${a.inv>0?eur(r2(a.inv)):'—'}<td data-l="Canoni annui">${eur(r2(a.rent))}<td data-l="Canoni incassati"${sc(a,'coll')}>${eur(r2(a.coll))}<td data-l="Spese locatore"${sc(a,'exp')}>${eur(r2(a.exp))}<td data-l="Tasse"${sc(a,'tax')}>${eur(r2(a.tax))}<td data-l="Rata mutuo"${sc(a,'mort')}>${eur(r2(a.mort))}${a.mortEst?' <small class=mut>(stima)</small>':''}<td data-l="Cash flow"${a.simAny?' class=sim':''}><b${a.cf<0&&!a.simAny?' style="color:#b91c1c"':''}>${eur(r2(a.cf))}</b><td data-l="Rend. lordo">${pct(a.gross)}<td data-l="Rend. netto"${a.simAny?' class=sim':''}>${pct(a.net)}<td data-l="Occupazione"${a.occSim?' class=sim':''}>${pct(a.occP)}<td data-l="Mq">${a.sqm||'—'}<td data-l="€/mq anno">${a.psqm==null?'—':eur(r2(a.psqm))}<td data-l="Rientro"${a.simAny?' class=sim':''} title="${a.rc>0?(a.fin?'anticipo (capitale proprio) ':'investimento ')+eur(r2(a.rc))+' ÷ cash flow annuo '+eur(r2(a.cfY)):a.payMiss?'Con il mutuo serve il capitale proprio versato (anticipo) nella scheda':'Manca l’investimento'}">${payTxt(a)}${a.payMiss?' <small class=mut>(manca anticipo)</small>':''}</tr>`).join('')}</table></div>
+ ${AL.map(a=>`<tr><td data-l="Appartamento">${aptTag(a.name,a.id)}${a.pros?' <span class="bdg ind">Individuato</span>':''}<td data-l="Investimento">${a.inv>0?eur(r2(a.inv)):'—'}<td data-l="Canoni annui">${eur(r2(a.rent))}<td data-l="Canoni incassati"${sc(a,'coll')}>${eur(r2(a.coll))}<td data-l="Spese locatore"${sc(a,'exp')}>${eur(r2(a.exp))}<td data-l="Tasse"${sc(a,'tax')}>${eur(r2(a.tax))}<td data-l="Rata mutuo"${sc(a,'mort')}>${eur(r2(a.mort))}${a.mortEst?' <small class=mut>(stima)</small>':''}<td data-l="Cash flow"${a.simAny?' class=sim':''}><b${a.cf<0&&!a.simAny?' style="color:#b91c1c"':''}>${eur(r2(a.cf))}</b><td data-l="Rend. lordo">${pct(a.gross)}<td data-l="Rend. netto"${a.simAny?' class=sim':''}>${pct(a.net)}<td data-l="Occupazione"${a.occSim?' class=sim':''}>${pct(a.occP)}<td data-l="Mq">${a.sqm||'—'}<td data-l="€/mq anno">${a.psqm==null?'—':eur(r2(a.psqm))}<td data-l="Rientro"${a.simAny?' class=sim':''} title="${a.rc>0?(a.fin?'anticipo (capitale proprio) ':'investimento ')+eur(r2(a.rc))+' ÷ cash flow annuo '+eur(r2(a.cfY)):a.payMiss?'Con il mutuo serve il capitale proprio versato (anticipo) nella scheda':'Manca l’investimento'}">${payTxt(a)}${a.payMiss?' <small class=mut>(manca anticipo)</small>':''}</tr>`).join('')}</table></div>
  <h3 style="margin:18px 0 0">Per camera</h3>${R.length?`<div class=sc><table class=rt id=frt><tr>${RCOLS.map(([k,l])=>thS('finrooms',k,l)).join('')}</tr>
  ${RL.map(r=>`<tr><td data-l="Appartamento">${aptTag(r.aname,r.apt)}<td data-l="Camera">${esc(r.name)}<td data-l="Posti letto">${r.beds}<td data-l="Mq">${r.sqm||'—'}<td data-l="Occupazione"${T.occSim?' class=sim':''}>${pct(r.occP)}<td data-l="Canoni annui">${eur(r2(r.rent))}<td data-l="€/mq anno">${r.psqm==null?'—':eur(r2(r.psqm))}</tr>`).join('')}</table></div>`:'<p class=mut>Nessuna camera censita.</p>'}
  <details class=card style="margin-top:14px"><summary><b>Come sono calcolati gli indicatori</b></summary><ul class=fnote>
@@ -168,10 +177,11 @@ export async function finance(){const cy = +today().slice(0,4),Y = st.FY||cy;st.
   <li><b>Tasso di occupazione</b>: giorni-letto occupati dai contratti ÷ (posti letto × giorni del periodo), per camera e per appartamento.</li>
   <li><b>Resa per mq</b>: canoni annui ÷ metri quadri delle camere.</li>
   <li>Con «Tutti gli appartamenti» i rendimenti considerano solo gli appartamenti con l’investimento indicato.</li>
+  <li><b>Appartamenti individuati per l’acquisto</b>: sono esclusi da tutti i calcoli, salvo in simulazione con «+ Appartamenti individuati». In quel caso gli incassi sono la rendita netta mensile della scheda nei mesi previsti (ogni anno per il numero di mesi indicato, dal mese della data di inizio), senza tasse perché è già netta; la rata del mutuo della scheda conta dal mese della data di acquisto (senza data: dal mese di inizio della rendita; senza nessuna delle due: tutto il periodo); l’investimento segue le date della scheda; l’occupazione considera tutti i posti letto occupati nei mesi con la rendita. Le loro camere non compaiono nella tabella Per camera.</li>
   <li><b>Simulazione</b>: tutti i canoni del periodo sono considerati incassati, con la cedolare; per i mesi successivi a quello corrente si usano, per ogni tipologia, le spese del locatore (comprese IMU e rata del mutuo) già registrate per il periodo o, se mancano, quelle dello stesso mese dell’anno precedente; senza rate del mutuo registrate si usa la rata mensile della scheda. Il tasso di occupazione considera il periodo intero, supponendo che i contratti proseguano come indicato. I valori che comprendono importi simulati sono in viola, i mesi simulati del grafico sono a righe.</li></ul></details></div>`;
  const go = y=>{st.FY = y;finance()};
  $('#fy').onchange = e=>go(+e.target.value);$('#fyp').onclick = ()=>go(Y-1);$('#fyn').onclick = ()=>{if(Y<cy+1)go(Y+1)};$('#fyn').disabled = Y>=cy+1;
- $('#fa').onchange = e=>{FAP.finance = e.target.value;finance()};$('#fmo').onchange = e=>{st.FM = +e.target.value;finance()};$('#fsim').onclick = ()=>{st.FSIM = !sim;finance()};
+ $('#fa').onchange = e=>{FAP.finance = e.target.value;finance()};$('#fmo').onchange = e=>{st.FM = +e.target.value;finance()};$('#fsim').onclick = ()=>{st.FSIM = !sim;if(sim)st.FIND = false;finance()};if($('#find'))$('#find').onclick = ()=>{st.FIND = !st.FIND;finance()};
  sortWire('finance',finance);document.querySelectorAll('#frt th[data-s]').forEach(th=>th.onclick=()=>{const c = SORT.finrooms,k = th.dataset.s;SORT.finrooms = !c||c.k!=k?{k,d:1}:c.d==1?{k,d:-1}:null;finance()});
  const box = $('#cfc');if(box){const tip = box.querySelector('.ftip'),sx = (m,k)=>m.s[k]>.005?` <i>(sim. ${eur(r2(m.s[k]))})</i>`:'',show = el=>{const i = +el.dataset.i,m = T.m[i],bb = box.getBoundingClientRect(),rb = el.getBoundingClientRect();
    const tr = trend(T.m.map(x=>x.cf),sim?11:F.lastI),cum = T.m.slice(0,i+1).reduce((a,x)=>a+x.cf,0);
