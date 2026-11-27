@@ -13,6 +13,8 @@ export const st = {
   FY: undefined,
   FSIM: false,
   FIND: false,
+  CALCO: false,
+  CALC: null,
   SHOWPROS: false,
   FM: 0,
   EM: undefined,

@@ -138,6 +138,39 @@ const RCOLS = [['aname','Appartamento'],['name','Camera'],['beds','Posti letto']
 const sv = (x,k)=>x[k]==null?-1e15:x[k];
 const SIMLBL = {coll:'canoni',exp:'spese',tax:'tasse',mort:'mutuo'};
 
+// ---------------------------------------------------------------------------------------------
+// Calcolatrice del menù Finanza: finestra che non blocca la pagina (si possono toccare gli importi delle card),
+// calcolo in sequenza come una calcolatrice tascabile, virgola per i decimali, tastiera da computer.
+const CK = [['C','cl'],['⌫',''],['%','op'],['÷','op'],['7',''],['8',''],['9',''],['×','op'],['4',''],['5',''],['6',''],['−','op'],['1',''],['2',''],['3',''],['+','op'],['0','z'],[',',''],['=','eq']];
+const cNum = s=>Number(String(s).replace(/\./g,'').replace(',','.'))||0;
+const cRaw = v=>String(Math.round(v*1e10)/1e10).replace('.',',');            // numero → testo senza separatori delle migliaia
+const cShow = s=>{if(!/^-?\d/.test(s))return s;const [i,d] = s.split(','),neg = i[0]=='-',n = (neg?i.slice(1):i).replace(/\B(?=(\d{3})+(?!\d))/g,'.');return(neg?'-':'')+n+(d!==undefined?','+d:'')};
+const cNew = ()=>({cur:'0',acc:null,op:null,exp:'',fresh:true});
+const cDo = (a,o,b)=>o=='+'?a+b:o=='−'?a-b:o=='×'?a*b:b===0?NaN:a/b;
+function calcKey(k){const c = st.CALC||(st.CALC = cNew());
+ if(c.cur=='Errore'&&k!='C')Object.assign(c,cNew());
+ if(/^\d$/.test(k)){if(c.fresh||c.cur=='0'){c.cur = k;c.fresh = false}else if(c.cur.replace(/\D/g,'').length<15)c.cur += k}
+ else if(k==','){if(c.fresh){c.cur = '0,';c.fresh = false}else if(!c.cur.includes(','))c.cur += ','}
+ else if(k=='C')Object.assign(c,cNew());
+ else if(k=='⌫'){if(!c.fresh){c.cur = c.cur.slice(0,-1);if(!c.cur||c.cur=='-')c.cur = '0'}}
+ else if(k=='%'){const v = cNum(c.cur),r = c.acc!=null&&(c.op=='+'||c.op=='−')?c.acc*v/100:v/100;c.cur = cRaw(r);c.fresh = true}
+ else if(['+','−','×','÷'].includes(k)){const v = cNum(c.cur);
+  if(c.acc!=null&&c.op&&!c.fresh){const r = cDo(c.acc,c.op,v);if(!isFinite(r)){Object.assign(c,cNew(),{cur:'Errore'});return}c.acc = r}else if(c.acc==null)c.acc = v;
+  c.op = k;c.exp = cShow(cRaw(c.acc))+' '+k;c.cur = cRaw(c.acc);c.fresh = true}
+ else if(k=='='){if(c.op&&c.acc!=null){const v = cNum(c.cur),r = cDo(c.acc,c.op,v);c.exp = cShow(cRaw(c.acc))+' '+c.op+' '+cShow(cRaw(v))+' =';
+  if(!isFinite(r)){Object.assign(c,cNew(),{cur:'Errore',exp:'divisione per zero'});return}c.cur = cRaw(r);c.acc = null;c.op = null;c.fresh = true}}}
+function calcPut(v){const c = st.CALC||(st.CALC = cNew());if(c.cur=='Errore')Object.assign(c,cNew());c.cur = cRaw(v);c.fresh = true;calcDraw()}
+function calcDraw(){const w = $('#calcw');if(!w)return;const c = st.CALC||(st.CALC = cNew());w.querySelector('.cexp').textContent = c.exp||' ';w.querySelector('.cdis').textContent = cShow(c.cur)}
+function calcPanel(){return`<div id=calcw role=dialog aria-label=Calcolatrice><h3>🧮 Calcolatrice <button type=button class=x data-ck=close aria-label="Chiudi">✕</button></h3><div class=cexp></div><div class=cdis></div>
+ <div class=ckeys>${CK.map(([k,c])=>`<button type=button class="${c}" data-ck="${k}">${k}</button>`).join('')}</div><p class=chint>Tocca un importo di una card per inserirlo. Da computer puoi usare anche la tastiera.</p></div>`}
+function calcWire(again){const w = $('#calcw');if(!w)return;calcDraw();
+ w.onclick = e=>{const k = e.target.closest('[data-ck]')?.dataset.ck;if(!k)return;if(k=='close'){st.CALCO = false;again();return}calcKey(k);calcDraw()};
+ // importo di una card → calcolatrice (il primo numero del valore, per esempio «270.000,00 €» o «30,5 anni»)
+ $('.fin').addEventListener('click',e=>{const b = e.target.closest('.cards .card b');if(!b||!st.CALCO)return;const m = b.textContent.match(/-?\d[\d.]*(,\d+)?/);if(m)calcPut(cNum(m[0]))})}
+// Tastiera (solo con la calcolatrice aperta e senza un campo attivo)
+document.addEventListener('keydown',e=>{if(!$('#calcw')||/INPUT|SELECT|TEXTAREA/.test(document.activeElement?.tagName||'')||e.ctrlKey||e.metaKey||e.altKey)return;
+ const k = {'*':'×','x':'×','/':'÷','-':'−','+':'+','Enter':'=','=':'=','.':',',',':',','Backspace':'⌫','Delete':'C','c':'C','C':'C','%':'%'}[e.key]??(/^\d$/.test(e.key)?e.key:null);
+ if(e.key=='Escape'){st.CALCO = false;$('#calcw').remove();$('#fcalc')?.classList.add('sec');$('.fin')?.classList.remove('pick');return}if(!k)return;e.preventDefault();calcKey(k);calcDraw()});
 const MESI = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
 export async function finance(){const cy = +today().slice(0,4),Y = st.FY||cy;st.FY = Y;const sim = !!st.FSIM,FM = +st.FM||0,ind = sim&&!!st.FIND;
  const [Ap0,C,E] = await Promise.all(['apartments','contracts','expenses'].map(all)),nPros = Ap0.filter(a=>+a.prospect).length,Ap = Ap0.filter(a=>!+a.prospect||ind),
@@ -151,7 +184,7 @@ export async function finance(){const cy = +today().slice(0,4),Y = st.FY||cy;st.
   mortSub = (T.mortEst?'stimata dalla rata in scheda':'dalle spese «Rata mutuo»')+(T.mInt!=null?' · interessi ~'+eur(r2(T.mInt)):''),
   S = k=>T.s[k]>.005, sCf = T.simAny, sc = (a,k)=>a.s[k]>.005?' class=sim':'';
  $('#main').innerHTML=`<div class=fin><h2>Finanza</h2>${aptSel(Ap.slice().sort((a,b)=>a.name.localeCompare(b.name,'it')),fa)} <span class=mnav><button type=button class=sec id=fyp aria-label="Anno precedente">‹</button><select id=fy aria-label=Anno>${years.map(y=>`<option${y==Y?' selected':''}>${y}</option>`).join('')}</select><button type=button class=sec id=fyn aria-label="Anno successivo">›</button></span>
- <select id=fmo aria-label="Mese di inizio del periodo"><option value=0>Anno solare</option>${MESI.map((n,i)=>`<option value=${i+1}${FM==i+1?' selected':''}>12 mesi da ${n.toLowerCase()}</option>`).join('')}</select> <button type=button id=fsim class="${sim?'simon':'sec'}" aria-pressed=${sim}>${sim?'✓ Simulazione attiva':'Simulazione'}</button>${sim&&nPros?` <button type=button id=find class="${ind?'simon':'sec'}" aria-pressed=${ind}>${ind?'✓ ':''}+ Appartamenti individuati (${nPros})</button>`:''}
+ <select id=fmo aria-label="Mese di inizio del periodo"><option value=0>Anno solare</option>${MESI.map((n,i)=>`<option value=${i+1}${FM==i+1?' selected':''}>12 mesi da ${n.toLowerCase()}</option>`).join('')}</select> <button type=button id=fsim class="${sim?'simon':'sec'}" aria-pressed=${sim}>${sim?'✓ Simulazione attiva':'Simulazione'}</button>${sim&&nPros?` <button type=button id=find class="${ind?'simon':'sec'}" aria-pressed=${ind}>${ind?'✓ ':''}+ Appartamenti individuati (${nPros})</button>`:''} <button type=button id=fcalc class="${st.CALCO?'':'sec'}" aria-pressed=${!!st.CALCO}>🧮 Calcolatrice</button>
  <p class=mut style="margin:6px 0 0">Periodo: ${per}${fa?'':' · tutti gli appartamenti'}</p>
  ${sim?`<p class="card simb">Simulazione: tutti i canoni del periodo sono considerati incassati (con la cedolare); ${F.ci>=11?'il periodo è concluso, quindi si simulano solo i canoni non ancora pagati':`per ${F.ci<0?'tutti i mesi':F.ci==10?'il mese di '+my(F.P[11]):'i mesi da '+my(F.P[F.ci+1])+' '+ad(my(F.P[11]))} le spese del locatore, l’IMU e la rata del mutuo sono quelle già registrate per il periodo o, se mancano, quelle dello stesso mese dell’anno precedente`}. ${ind?' Comprende gli <span style="font-weight:700">appartamenti individuati per l’acquisto</span>: rendita netta della scheda nei mesi previsti (senza tasse) e rata del mutuo dal mese di acquisto.':''} <span class=sim style="font-weight:700">I valori in viola</span> e le barre a righe comprendono importi simulati.</p>`:''}
  ${noInv&&T.invOut?`<p class=card style="margin-top:10px">Nel periodo scelto nessuna voce dell’investimento risulta ancora sostenuta: le date indicate nella scheda dell’appartamento sono successive.</p>`:noInv?'<p class=card style="margin-top:10px">Per calcolare i rendimenti inserisci l’<b>investimento</b> (prezzo di acquisto, costi di acquisto, ristrutturazione e arredi) nella scheda dell’appartamento, menù <b>Appartamenti</b> → ✎.</p>':''}
@@ -177,10 +210,11 @@ export async function finance(){const cy = +today().slice(0,4),Y = st.FY||cy;st.
   <li><b>Resa per mq</b>: canoni annui ÷ metri quadri delle camere.</li>
   <li>Con «Tutti gli appartamenti» i rendimenti considerano solo gli appartamenti con l’investimento indicato.</li>
   <li><b>Appartamenti individuati per l’acquisto</b>: sono esclusi da tutti i calcoli, salvo in simulazione con «+ Appartamenti individuati». In quel caso gli incassi sono la rendita netta mensile della scheda nei mesi previsti (ogni anno per il numero di mesi indicato, dal mese della data di inizio), senza tasse perché è già netta; la rata del mutuo della scheda conta dal mese della data di acquisto (senza data: dal mese di inizio della rendita; senza nessuna delle due: tutto il periodo); l’investimento segue le date della scheda; l’occupazione considera tutti i posti letto occupati nei mesi con la rendita. Le loro camere non compaiono nella tabella Per camera.</li>
-  <li><b>Simulazione</b>: tutti i canoni del periodo sono considerati incassati, con la cedolare; per i mesi successivi a quello corrente si usano, per ogni tipologia, le spese del locatore (comprese IMU e rata del mutuo) già registrate per il periodo o, se mancano, quelle dello stesso mese dell’anno precedente; senza rate del mutuo registrate si usa la rata mensile della scheda. Il tasso di occupazione considera il periodo intero, supponendo che i contratti proseguano come indicato. I valori che comprendono importi simulati sono in viola, i mesi simulati del grafico sono a righe.</li></ul></details></div>`;
+  <li><b>Simulazione</b>: tutti i canoni del periodo sono considerati incassati, con la cedolare; per i mesi successivi a quello corrente si usano, per ogni tipologia, le spese del locatore (comprese IMU e rata del mutuo) già registrate per il periodo o, se mancano, quelle dello stesso mese dell’anno precedente; senza rate del mutuo registrate si usa la rata mensile della scheda. Il tasso di occupazione considera il periodo intero, supponendo che i contratti proseguano come indicato. I valori che comprendono importi simulati sono in viola, i mesi simulati del grafico sono a righe.</li></ul></details>${st.CALCO?calcPanel():''}</div>`;
+ $('.fin').classList.toggle('pick',!!st.CALCO);if(st.CALCO)calcWire(finance);
  const go = y=>{st.FY = y;finance()};
  $('#fy').onchange = e=>go(+e.target.value);$('#fyp').onclick = ()=>go(Y-1);$('#fyn').onclick = ()=>{if(Y<cy+1)go(Y+1)};$('#fyn').disabled = Y>=cy+1;
- $('#fa').onchange = e=>{FAP.finance = e.target.value;finance()};$('#fmo').onchange = e=>{st.FM = +e.target.value;finance()};$('#fsim').onclick = ()=>{st.FSIM = !sim;if(sim)st.FIND = false;finance()};if($('#find'))$('#find').onclick = ()=>{st.FIND = !st.FIND;finance()};
+ $('#fa').onchange = e=>{FAP.finance = e.target.value;finance()};$('#fmo').onchange = e=>{st.FM = +e.target.value;finance()};$('#fcalc').onclick = ()=>{st.CALCO = !st.CALCO;finance()};$('#fsim').onclick = ()=>{st.FSIM = !sim;if(sim)st.FIND = false;finance()};if($('#find'))$('#find').onclick = ()=>{st.FIND = !st.FIND;finance()};
  sortWire('finance',finance);document.querySelectorAll('#frt th[data-s]').forEach(th=>th.onclick=()=>{const c = SORT.finrooms,k = th.dataset.s;SORT.finrooms = !c||c.k!=k?{k,d:1}:c.d==1?{k,d:-1}:null;finance()});
  const box = $('#cfc');if(box){const tip = box.querySelector('.ftip'),sx = (m,k)=>m.s[k]>.005?` <i>(sim. ${eur(r2(m.s[k]))})</i>`:'',show = el=>{const i = +el.dataset.i,m = T.m[i],bb = box.getBoundingClientRect(),rb = el.getBoundingClientRect();
    const tr = trend(T.m.map(x=>x.cf),sim?11:F.lastI),cum = T.m.slice(0,i+1).reduce((a,x)=>a+x.cf,0);

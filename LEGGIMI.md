@@ -1,4 +1,4 @@
-# Affitti Studenti 2.3.19 – struttura dei file
+# Affitti Studenti 2.3.20 – struttura dei file
 
 L'app non è più un unico file e **non usa cartelle**: `index.html` carica `main.js`, che importa gli altri moduli (moduli ES del browser, nessuna compilazione).
 **Va servita da un sito** (GitHub Pages, o in locale `python3 -m http.server`): aprendo `index.html` con doppio clic dal disco i moduli non si caricano.
@@ -39,7 +39,7 @@ Lo zip ha tre cartelle: `sorgenti` (questi file), `database` e `manuali`.
 | --- | --- |
 | `001_supabase_init.sql`, `002_tabelle.sql`, `003_whatsapp.sql`, `004_trasferimento_caparra.sql`, `005_cedolare_ricorrenti.sql`, `006_investimento_mutuo.sql`, `007_date_investimento.sql`, `008_individuati_rendita.sql` | script del database, da eseguire in ordine in Supabase (SQL Editor) |
 | `send-whatsapp-index.ts`, `send-whatsapp-handler.js` | funzione di invio WhatsApp (Edge Function) |
-| `Manuale-Affitti-Studenti-2.3.19.docx`, `Dettaglio-modifica-2.3.19.docx` | manuale e dettaglio della modifica |
+| `Manuale-Affitti-Studenti-2.3.20.docx`, `Dettaglio-modifica-2.3.20.docx` | manuale e dettaglio della modifica |
 
 ## Novità 2.3.0
 
@@ -133,3 +133,7 @@ Lo zip ha tre cartelle: `sorgenti` (questi file), `database` e `manuali`.
 ## Novità 2.3.19
 
 - Finanza: card riordinate in gruppi (Investimenti, Rendimenti, Cash flow, Canoni, Spese).
+
+## Novità 2.3.20
+
+- Finanza: calcolatrice (somma, sottrazione, moltiplicazione, divisione, percentuale) con importi presi dalle card e tastiera da computer.
