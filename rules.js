@@ -38,8 +38,6 @@ export async function check(t,o){if(t=='deposit_moves'){if(!['versamento','resti
    if(moved&&ap.rooms!=null&&oth.length+1>ap.rooms)throw`L’appartamento “${ap.name}” ha ${ap.rooms} camere: ne risultano già censite ${oth.length}`;
    const bt=sum0(oth.map(r=>r.beds||0))+(o.beds||0);if((moved||(old.beds||0)!==(o.beds||0))&&ap.beds!=null&&bt>ap.beds)throw`I posti letto delle camere (${bt}) supererebbero quelli dell’appartamento “${ap.name}” (${ap.beds})`}}
  if(t=='apartments'){for(const k of['purchase_price','purchase_costs','renovation','mortgage_payment','mortgage_interest','mortgage_principal','own_capital'])if(Number.isNaN(o[k])||o[k]<0)throw'Gli importi di investimento e mutuo non possono essere negativi';
-  o.prospect=o.prospect?1:0;if(Number.isNaN(o.income_monthly)||o.income_monthly<0)throw'La rendita netta mensile non può essere negativa';
-  if(o.income_months!=null&&(Number.isNaN(o.income_months)||!Number.isInteger(o.income_months)||o.income_months<1||o.income_months>12))throw'Il numero di mesi della rendita deve essere un numero intero da 1 a 12';
   const r2=v=>Math.round(v*100)/100,mp=o.mortgage_payment,mi=o.mortgage_interest,mc=o.mortgage_principal;
   if(mp==null&&mi!=null&&mc!=null)o.mortgage_payment=r2(mi+mc);
   else if(mp!=null&&mi!=null&&mc==null){if(mi>mp+.005)throw'La quota interessi supera la rata del mutuo';o.mortgage_principal=r2(mp-mi)}
@@ -63,7 +61,7 @@ export async function mqWeights(e,T){const[C,Ro,Te]=await Promise.all(['contract
  return T.map(t=>Math.round((w.get(t.id)||0)*1e6)/1e6)}
 export async function duesRows(month){const[D,C,Te,Ap,Pa]=await Promise.all(['rent_dues','contracts','tenants','apartments','payments'].map(all));
  return D.filter(d=>!month||d.month.slice(0,7)===month).map(d=>{const c=C.find(x=>x.id===d.contract_id),t=Te.find(x=>x.id===c.tenant_id),paid=sumk(Pa.filter(p=>p.due_id===d.id),'amount'),rem=Math.round((d.amount-paid)*100)/100;
-  return{id:d.id,month:d.month,amount:d.amount,tenant:t.first_name+' '+t.last_name,apartment:Ap.find(x=>x.id===c.apartment_id).name,apt:c.apartment_id,paid,remaining:rem,late:rem>0&&d.month.slice(0,8)+String(c.due_day||5).padStart(2,'0')<today()}})
+  return{id:d.id,month:d.month,due_on:d.month.slice(0,8)+String(c.due_day||5).padStart(2,'0'),amount:d.amount,tenant:t.first_name+' '+t.last_name,apartment:Ap.find(x=>x.id===c.apartment_id).name,apt:c.apartment_id,paid,remaining:rem,late:rem>0&&d.month.slice(0,8)+String(c.due_day||5).padStart(2,'0')<today()}})
  .sort((a,b)=>b.month.localeCompare(a.month)||a.apartment.localeCompare(b.apartment))}
 export async function sharesRows(){const[Al,Sh,SP,E,Te,Ap,Ty]=await Promise.all(['allocations','allocation_shares','share_payments','expenses','tenants','apartments','expense_types'].map(all));
  return Sh.map(s=>{const al=Al.find(a=>a.id===s.allocation_id),e=al&&E.find(x=>x.id===al.expense_id);if(!e)return null;const t=Te.find(x=>x.id===s.tenant_id),pays=SP.filter(p=>p.share_id===s.id).sort((x,y)=>y.paid_on.localeCompare(x.paid_on)||y.id-x.id),pc=sum0(pays.map(p=>Math.round(p.amount*100)));

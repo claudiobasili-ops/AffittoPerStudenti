@@ -11,9 +11,9 @@ export function pdfDoc(blocks,title){const PW=595.28,PH=841.89,M=40,CW=PW-2*M,cv
  rr=(x,b,w,h,r,c)=>{const k=.5523*r;ops.push(`${rgb(c)} rg ${f(x+r)} ${f(b)} m ${f(x+w-r)} ${f(b)} l ${f(x+w-r+k)} ${f(b)} ${f(x+w)} ${f(b+r-k)} ${f(x+w)} ${f(b+r)} c ${f(x+w)} ${f(b+h-r)} l ${f(x+w)} ${f(b+h-r+k)} ${f(x+w-r+k)} ${f(b+h)} ${f(x+w-r)} ${f(b+h)} c ${f(x+r)} ${f(b+h)} l ${f(x+r-k)} ${f(b+h)} ${f(x)} ${f(b+h-r+k)} ${f(x)} ${f(b+h-r)} c ${f(x)} ${f(b+r)} l ${f(x)} ${f(b+r-k)} ${f(x+r-k)} ${f(b)} ${f(x+r)} ${f(b)} c f`)},
  hl=(yy,c)=>ops.push(`${rgb(c)} RG .5 w ${f(M)} ${f(yy)} m ${f(M+CW)} ${f(yy)} l S`),
  wrap=(x,z,b,mw)=>{const out=[];let cur='';for(const w of String(x).split(/\s+/).filter(Boolean)){const t=cur?cur+' '+w:w;if(cur&&tw(t,z,b)>mw){out.push(cur);cur=w}else cur=t}if(cur||!out.length)out.push(cur);return out},
- pill=(x,yb,t,z,tag,col)=>{const w=tw(t,z,1)+8;rr(x,yb-3,w,z+5,3,tag=='apt'?col:'#e0e7ff');txt(x+4,yb,t,z,1,tag=='apt'?fgc(col):'#1e3a8a');return w},
+ pill=(x,yb,t,z,tag,col)=>{if(tag=='tn'){const u=tw(t,z,1);txt(x,yb,t,z,1,'#1e3a8a');ops.push(`${rgb('#1e3a8a')} RG .6 w ${f(x)} ${f(yb-1.8)} m ${f(x+u)} ${f(yb-1.8)} l S`);return u+4}const w=tw(t,z,1)+8;rr(x,yb-3,w,z+5,3,tag=='apt'?col:'#e0e7ff');txt(x+4,yb,t,z,1,tag=='apt'?fgc(col):'#1e3a8a');return w},
  table=b=>{const z=9,lh=14,px=4,py=4,tot=b.cols.reduce((a,c)=>a+c.w,0),ws=b.cols.map(c=>c.w/tot*CW),xs=ws.map((_,i)=>M+ws.slice(0,i).reduce((a,v)=>a+v,0));
-  const row=(cells,head)=>{const L=cells.map((c,i)=>{const t=typeof c=='object'?c:{text:c};return{t,ls:wrap(t.text??'',z,head||!!t.tag,ws[i]-2*px-(t.tag?8:0))}}),n=Math.max(1,...L.map(l=>l.ls.length)),h=n*lh+2*py;
+  const row=(cells,head)=>{const L=cells.map((c,i)=>{const t=c&&typeof c=='object'?c:{text:c??''};return{t,ls:wrap(t.text??'',z,head||!!t.tag,ws[i]-2*px-(t.tag?8:0))}}),n=Math.max(1,...L.map(l=>l.ls.length)),h=n*lh+2*py;
    if(y-h<M+16){np();if(!head)row(b.cols.map(c=>c.h),1)}
    if(head)ops.push(`${rgb('#f1f5f9')} rg ${f(M)} ${f(y-h)} ${f(CW)} ${f(h)} re f`);
    L.forEach((l,i)=>l.ls.forEach((x,k)=>{const yb=y-py-z-k*lh+1,bold=head||!!l.t.tag,w=tw(x,z,bold)+(l.t.tag?8:0),xx=b.cols[i].a=='r'&&!l.t.tag?xs[i]+ws[i]-px-w:xs[i]+px;

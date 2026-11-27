@@ -12,8 +12,6 @@ export const st = {
   LASTREP: null,
   FY: undefined,
   FSIM: false,
-  FPRO: false,
-  APRO: false,
   FM: 0,
   EM: undefined,
   DACT: false,
