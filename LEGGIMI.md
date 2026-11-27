@@ -1,4 +1,4 @@
-# Affitti Studenti 2.3.14 – struttura dei file
+# Affitti Studenti 2.3.16 – struttura dei file
 
 L'app non è più un unico file e **non usa cartelle**: `index.html` carica `main.js`, che importa gli altri moduli (moduli ES del browser, nessuna compilazione).
 **Va servita da un sito** (GitHub Pages, o in locale `python3 -m http.server`): aprendo `index.html` con doppio clic dal disco i moduli non si caricano.
@@ -37,9 +37,9 @@ Lo zip ha tre cartelle: `sorgenti` (questi file), `database` e `manuali`.
 
 | File | Contenuto |
 | --- | --- |
-| `001_supabase_init.sql`, `002_tabelle.sql`, `003_whatsapp.sql`, `004_trasferimento_caparra.sql`, `005_cedolare_ricorrenti.sql`, `006_investimento_mutuo.sql`, `007_date_investimento.sql`, `008_individuati_rendita.sql` | script del database, da eseguire in ordine in Supabase (SQL Editor) |
+| `001_supabase_init.sql`, `002_tabelle.sql`, `003_whatsapp.sql`, `004_trasferimento_caparra.sql`, `005_cedolare_ricorrenti.sql`, `006_investimento_mutuo.sql`, `007_date_investimento.sql` | script del database, da eseguire in ordine in Supabase (SQL Editor) |
 | `send-whatsapp-index.ts`, `send-whatsapp-handler.js` | funzione di invio WhatsApp (Edge Function) |
-| `Manuale-Affitti-Studenti-2.3.14.docx`, `Dettaglio-modifica-2.3.14.docx` | manuale e dettaglio della modifica |
+| `Manuale-Affitti-Studenti-2.3.16.docx`, `Dettaglio-modifica-2.3.16.docx` | manuale e dettaglio della modifica |
 
 ## Novità 2.3.0
 
@@ -109,8 +109,13 @@ Lo zip ha tre cartelle: `sorgenti` (questi file), `database` e `manuali`.
 
 ## Novità 2.3.14
 
-- Scheda Appartamento: pulsante «Imposta come individuato per acquisto» per segnare un appartamento individuato ma non ancora di proprietà (premuto di nuovo lo riporta di proprietà). Gli appartamenti individuati non entrano nella Dashboard e nel menù Finanza.
-- Scheda Appartamento: sezione «Rendita» con rendita netta mensile, data di inizio e numero di mesi nell'anno.
-- Appartamenti: casella «Mostra anche gli appartamenti individuati per l'acquisto» (senza spunta la griglia mostra solo quelli di proprietà); gli individuati hanno l'etichetta «Individuato».
-- Finanza: con la simulazione attiva compare il pulsante «+ Appartamenti individuati», che li comprende nella simulazione: rendita netta della scheda nei mesi indicati (senza tasse) al posto dei canoni e rata del mutuo della scheda dalla data di acquisto (o di inizio della rendita). Spegnendo la simulazione sono di nuovo esclusi.
-- **Con la sincronizzazione attiva eseguire prima `008_individuati_rendita.sql`** in Supabase.
+- Finanza: card «Rientro dell'investimento» (anni = capitale da recuperare ÷ cash flow annuo); per gli immobili con mutuo si recupera solo l'anticipo (capitale proprio versato). Colonna Rientro nella tabella per appartamento.
+
+## Novità 2.3.15
+
+- Canoni: colonna Scadenza. Report: dettaglio delle quote con scadenza e competenza, scadenza dei canoni, competenza nel CSV delle spese inquilini.
+- Corretto: il PDF non si generava con spese senza descrizione.
+
+## Novità 2.3.16
+
+- Report: la colonna «Da incassare» si chiama «Da versare».
