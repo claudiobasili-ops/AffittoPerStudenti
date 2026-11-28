@@ -8,7 +8,7 @@ import { aptCol, aptTag, fileDlg, tnTag } from './ui.js';
 import { $, esc, eur, fd, fm, sum0, today } from './util.js';
 
 export function savePdf(){const R=st.LASTREP;fileDlg(R.name,pdfDoc(R.blocks,R.title),'Report PDF',()=>localReport('pdf',R.p))}
-async function localReport(kind,p){try{const t0=today();if(p.late){p.locatore=false;if(!p.spese&&!p.canoni)throw'Per i ritardi seleziona Spese inquilini e/o Canoni (le spese locatore non hanno ritardi)'}
+export async function localReport(kind,p){try{const t0=today();if(p.late){p.locatore=false;if(!p.spese&&!p.canoni)throw'Per i ritardi seleziona Spese inquilini e/o Canoni (le spese locatore non hanno ritardi)'}
  if(!p.spese&&!p.locatore&&!p.canoni)throw'Seleziona almeno una voce: Spese inquilini, Spese locatore e/o Canoni';
  const[Ap,te,Co]=await Promise.all(['apartments','tenants','contracts'].map(all)),ap=p.apartment?Ap.find(a=>a.id==p.apartment):null;if(p.apartment&&!ap)throw'Appartamento non trovato';
  const an=id=>Ap.find(a=>a.id===id)?.name||'',atg=n=>aptTag(n,Ap.find(x=>x.name===n)?.id),tn=id=>{const t=te.find(x=>x.id===id);return t?t.first_name+' '+t.last_name:''},cmp=(x,y)=>String(x).localeCompare(String(y),'it'),f2=c=>(c/100).toFixed(2),

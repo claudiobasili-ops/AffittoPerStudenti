@@ -1,4 +1,4 @@
-# Affitti Studenti 2.3.21 – struttura dei file
+# Affitti Studenti 2.4.0 – struttura dei file
 
 L'app non è più un unico file e **non usa cartelle**: `index.html` carica `main.js`, che importa gli altri moduli (moduli ES del browser, nessuna compilazione).
 **Va servita da un sito** (GitHub Pages, o in locale `python3 -m http.server`): aprendo `index.html` con doppio clic dal disco i moduli non si caricano.
@@ -25,7 +25,7 @@ L'app non è più un unico file e **non usa cartelle**: `index.html` carica `mai
 | `views-dues.js` | menù Canoni |
 | `views-entities.js` | elenco e modulo generici: Appartamenti, Camere, Inquilini, Contratti, Spese |
 | `views-expenses.js` | ripartizione e incassi delle Spese |
-| `views-attachments.js` | allegati delle Spese |
+| `views-attachments.js` | allegati di Spese, Contratti e Inquilini |
 | `views-deposits.js` | menù Caparre |
 | `views-report.js` | menù Report e PDF |
 | `views-finance.js` | menù Finanza: rendimento lordo e netto, cash flow, tasso di occupazione, resa per mq, simulazione |
@@ -37,9 +37,9 @@ Lo zip ha tre cartelle: `sorgenti` (questi file), `database` e `manuali`.
 
 | File | Contenuto |
 | --- | --- |
-| `001_supabase_init.sql`, `002_tabelle.sql`, `003_whatsapp.sql`, `004_trasferimento_caparra.sql`, `005_cedolare_ricorrenti.sql`, `006_investimento_mutuo.sql`, `007_date_investimento.sql`, `008_individuati_rendita.sql` | script del database, da eseguire in ordine in Supabase (SQL Editor) |
+| `001_supabase_init.sql`, `002_tabelle.sql`, `003_whatsapp.sql`, `004_trasferimento_caparra.sql`, `005_cedolare_ricorrenti.sql`, `006_investimento_mutuo.sql`, `007_date_investimento.sql`, `008_individuati_rendita.sql`, `009_allegati_contratti_inquilini.sql` | script del database, da eseguire in ordine in Supabase (SQL Editor) |
 | `send-whatsapp-index.ts`, `send-whatsapp-handler.js` | funzione di invio WhatsApp (Edge Function) |
-| `Manuale-Affitti-Studenti-2.3.21.docx`, `Dettaglio-modifica-2.3.21.docx` | manuale e dettaglio della modifica |
+| `Manuale-Affitti-Studenti-2.4.0.docx`, `Dettaglio-modifica-2.4.0.docx` | manuale e dettaglio della modifica |
 
 ## Novità 2.3.0
 
@@ -141,3 +141,10 @@ Lo zip ha tre cartelle: `sorgenti` (questi file), `database` e `manuali`.
 ## Novità 2.3.21
 
 - Report: pulsante «Solo in ritardo ad oggi» (spese inquilini e canoni in ritardo alla data di oggi, ignorando il periodo Dal/Al).
+
+## Novità 2.4.0
+
+- Dashboard: sezione «In scadenza» (contratti entro 60 giorni con Rinnova, caparre da restituire con Gestisci); Sollecita su WhatsApp dai ritardi (anche nel menù Canoni).
+- Canoni del mese corrente generati in automatico all'apertura (doppioni tra dispositivi eliminati dopo la sincronizzazione).
+- Allegati (📎) anche su Contratti e Inquilini.
+- **Con la sincronizzazione attiva eseguire prima `009_allegati_contratti_inquilini.sql`** in Supabase.

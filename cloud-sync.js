@@ -1,4 +1,5 @@
 // Sincronizzazione per record con il cloud
+import { autoDues, dedupeDues } from './api.js';
 import { exportAll, fingerprint } from './backup.js';
 import { authToken, ce, getSession, httpErr, newUid, sb } from './cloud-supabase.js';
 import { P, all, docBlob, get, gm, rawDel, rawPut, sm } from './db.js';
@@ -17,7 +18,7 @@ const SCH = {apartments:{name:'t',color:'t',address:'t',city:'t',rooms:'n',beds:
   expenses:{apartment_id:'>apartments',type_id:'>expense_types',description:'t',amount:'n',landlord_amount:'n',spent_on:'t',period_from:'t',period_to:'t',recurring:'n',frequency:'t',supplier:'t',notes:'t'},
   allocations:{expense_id:'>expenses',criterion:'t',total_cents:'n'},allocation_shares:{allocation_id:'>allocations',tenant_id:'>tenants',days:'n',weight:'n',calc_cents:'n',final_cents:'n',modified:'b'},
   share_payments:{share_id:'>allocation_shares',paid_on:'t',amount:'n',method:'t',notes:'t'},deposit_moves:{contract_id:'>contracts',to_contract_id:'>contracts',kind:'t',moved_on:'t',amount:'n',method:'t',notes:'t'},
-  documents:{expense_id:'>expenses',filename:'t',mime:'t',size:'n'}};
+  documents:{expense_id:'>expenses',contract_id:'>contracts',tenant_id:'>tenants',filename:'t',mime:'t',size:'n'}};
 const hasData = async()=>{for(const t of TABLES)if(t!='expense_types'&&(await all(t)).length)return true;return false};
 async function pendingCount(){let n=((await gm('tomb'))||[]).length;for(const t of ORDER)n+=(await all(t)).filter(r=>r.dt>0||!r.gid).length;return n}
 async function ensureGids(){for(const t of ORDER)for(const r of await all(t))if(!r.gid){const o={...r,gid:t=='documents'?(r.uid||newUid()):newUid(),dt:Date.now()};if(t=='documents')o.uid=o.gid;await rawPut(t,o)}}
@@ -79,7 +80,7 @@ export async function syncNow(manual){if(SYNC.busy){SYNC.again=1;return}if(!st.D
    await sm('syncRev',Math.max(last,max));await sm('syncInit',s.uid);await sm('forceMode',null);await sm('syncAt',new Date().toISOString());SYNC.state='ok';SYNC.asked=0;SYNC.pulled=cnt.recv+cnt.del+cnt.conf>0?1:0;
    SYNC.info=`ricevuti ${cnt.recv}, inviati ${cnt.sent}, eliminati ${cnt.del+cnt.del2}${cnt.conf?', conflitti risolti '+cnt.conf+' (vince la modifica più recente)':''}`}
  }catch(e){SYNC.state=e.kind=='login'?'login':e.kind=='net'?'offline':'error';SYNC.msg=e.message||String(e)}
- finally{SYNC.busy=0;if(SYNC.pulled){SYNC.pulled=0;if(!$('#dlg').open)try{V[st.CURK][1]()}catch{}}
+ finally{SYNC.busy=0;if(SYNC.state=='ok'){try{if(await dedupeDues()+await autoDues())SYNC.pulled=1}catch{}}if(SYNC.pulled){SYNC.pulled=0;if(!$('#dlg').open)try{V[st.CURK][1]()}catch{}}
   try{const el=$('#cloudline');if(el)el.textContent=await cloudLine();if(st.CURK=='cloud'&&!$('#dlg').open)cloudView()}catch{}
   if(SYNC.again){SYNC.again=0;schedSync(800)}}}
 export function schedSync(ms=4000){clearTimeout(SYNC.timer);SYNC.timer=setTimeout(()=>syncNow().catch(()=>{}),ms)}

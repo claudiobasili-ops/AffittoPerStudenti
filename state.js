@@ -16,6 +16,7 @@ export const st = {
   CALCO: false,
   CALC: null,
   RLATE: false,
+  AUTOM: null,
   SHOWPROS: false,
   FM: 0,
   EM: undefined,

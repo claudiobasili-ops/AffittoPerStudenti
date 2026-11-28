@@ -63,7 +63,7 @@ export async function mqWeights(e,T){const[C,Ro,Te]=await Promise.all(['contract
  return T.map(t=>Math.round((w.get(t.id)||0)*1e6)/1e6)}
 export async function duesRows(month){const[D,C,Te,Ap,Pa]=await Promise.all(['rent_dues','contracts','tenants','apartments','payments'].map(all));
  return D.filter(d=>!month||d.month.slice(0,7)===month).map(d=>{const c=C.find(x=>x.id===d.contract_id),t=Te.find(x=>x.id===c.tenant_id),paid=sumk(Pa.filter(p=>p.due_id===d.id),'amount'),rem=Math.round((d.amount-paid)*100)/100;
-  return{id:d.id,month:d.month,due_on:d.month.slice(0,8)+String(c.due_day||5).padStart(2,'0'),amount:d.amount,tenant:t.first_name+' '+t.last_name,apartment:Ap.find(x=>x.id===c.apartment_id).name,apt:c.apartment_id,paid,remaining:rem,late:rem>0&&d.month.slice(0,8)+String(c.due_day||5).padStart(2,'0')<today()}})
+  return{id:d.id,contract_id:c.id,tenant_id:c.tenant_id,month:d.month,due_on:d.month.slice(0,8)+String(c.due_day||5).padStart(2,'0'),amount:d.amount,tenant:t.first_name+' '+t.last_name,apartment:Ap.find(x=>x.id===c.apartment_id).name,apt:c.apartment_id,paid,remaining:rem,late:rem>0&&d.month.slice(0,8)+String(c.due_day||5).padStart(2,'0')<today()}})
  .sort((a,b)=>b.month.localeCompare(a.month)||a.apartment.localeCompare(b.apartment))}
 export async function sharesRows(){const[Al,Sh,SP,E,Te,Ap,Ty]=await Promise.all(['allocations','allocation_shares','share_payments','expenses','tenants','apartments','expense_types'].map(all));
  return Sh.map(s=>{const al=Al.find(a=>a.id===s.allocation_id),e=al&&E.find(x=>x.id===al.expense_id);if(!e)return null;const t=Te.find(x=>x.id===s.tenant_id),pays=SP.filter(p=>p.share_id===s.id).sort((x,y)=>y.paid_on.localeCompare(x.paid_on)||y.id-x.id),pc=sum0(pays.map(p=>Math.round(p.amount*100)));

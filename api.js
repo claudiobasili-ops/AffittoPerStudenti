@@ -38,6 +38,13 @@ async function route(p,o){const m=o.method||'GET',b=o.body,[path,qs]=p.split('?'
    expMonthDue:r2(sumk(SR.filter(s=>s.spent_on.slice(0,7)===mo),'remaining')),shareList:SR.filter(s=>s.remaining>0),unallocated:Ex.filter(e=>e.amount>0&&!alIds.has(e.id)).length,
    asOf:{arrears:r2(arrears+expLate),arrearsN:open.filter(d=>d.month.slice(0,7)<cm).length,arrearsSN:SRl.length,current,expDue,cmEnd,expFut,expFutN:SRf.length,total:r2(arrears+expLate+current+expDue)},
    k:{apartments:Ap.length,tenants:new Set((await all('contracts')).filter(c=>c.start_date<=t0&&(!c.end_date||c.end_date>=t0)).map(c=>c.tenant_id)).size}}}
+ // Allegati di spese, contratti e inquilini (documents.expense_id / contract_id / tenant_id)
+ const DK={expenses:'expense_id',contracts:'contract_id',tenants:'tenant_id'}[a[0]];
+ if(DK&&(a[2]=='docs'||a[2]=='doc')){const id=+a[1];if(!await get(a[0],id))throw'Elemento non trovato';
+  if(a[2]=='docs')return(await all('documents')).filter(d=>d[DK]===id).map(d=>({id:d.id,filename:d.filename}));
+  const f=b.get('f');if(!f)throw'File mancante';const ex=(f.name.split('.').pop()||'').toLowerCase(),ty=f.type||({pdf:'application/pdf',jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',gif:'image/gif',webp:'image/webp',heic:'image/heic',heif:'image/heif'})[ex]||'';
+  if(!/^(application\/pdf|image\/)/.test(ty))throw'Sono ammessi solo PDF e immagini';if(f.size>15e6)throw'File troppo grande (max 15 MB)';
+  return put('documents',{uid:newUid(),[DK]:id,filename:f.name,mime:ty,data:await f.arrayBuffer()})}
  if(a[0]=='expenses'){const e=await get('expenses',+a[1]);if(!e)throw'Spesa non trovata';
   if(a[2]=='tenants')return involved(e);
   if(a[2]=='collect')return(await sharesRows()).filter(s=>s.expense_id===e.id);
@@ -60,4 +67,12 @@ async function route(p,o){const m=o.method||'GET',b=o.body,[path,qs]=p.split('?'
   const SP=await all('share_payments');for(const x of L){const pd=sum0(SP.filter(p=>p.share_id===+x.id).map(p=>Math.round(p.amount*100)));if(Math.round(x.final*100)<pd)throw'Una quota è inferiore a quanto già incassato ('+(pd/100).toFixed(2)+' €): elimina prima l\'incasso'}
   for(const x of L){const s=await get('allocation_shares',+x.id);s.final_cents=Math.round(x.final*100);s.modified=s.final_cents!==s.calc_cents;await put('allocation_shares',s)}return{ok:1}}
  throw'Operazione non supportata'}
+// Canoni del mese corrente generati all'apertura dell'app (una volta per mese e per sessione)
+export async function autoDues(){const m=thisM();if(st.AUTOM===m)return 0;st.AUTOM=m;const r=await route('dues/generate',{method:'POST',body:{month:m}});await dedupeDues();return r.created}
+// Doppioni (stesso contratto e mese, per esempio generati da due dispositivi prima di sincronizzarsi): si tiene quello con pagamenti,
+// altrimenti quello con il codice (gid) minore, così tutti i dispositivi scelgono lo stesso; si eliminano solo canoni senza pagamenti
+export async function dedupeDues(){const D=await all('rent_dues'),Pa=await all('payments'),G=new Map();let n=0;
+ for(const d of D){const k=d.contract_id+'|'+String(d.month).slice(0,7);if(!G.has(k))G.set(k,[]);G.get(k).push(d)}
+ for(const L of G.values()){if(L.length<2)continue;const hp=d=>Pa.some(p=>p.due_id===d.id);L.sort((x,y)=>(hp(y)-hp(x))||String(x.gid||'').localeCompare(String(y.gid||''))||x.id-y.id);
+  for(const d of L.slice(1))if(!hp(d)){await rm('rent_dues',d.id);n++}}return n}
 export async function api(p,o={}){try{return await route(p,o)}catch(e){alert(typeof e==='string'?e:'Errore: '+(e?.message||e));throw 0}}

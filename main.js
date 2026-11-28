@@ -1,5 +1,5 @@
 // Avvio dell'applicazione
-import { api } from './api.js';
+import { api, autoDues } from './api.js';
 import { backupUI } from './backup.js';
 import { waSend } from './cloud-whatsapp.js';
 import { initDB } from './db.js';
@@ -19,5 +19,5 @@ document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest
 $('#nav').onclick=e=>{const k=e.target.dataset.k;if(e.target.id=='bk')backupUI();if(k){st.CURK=k;st.CALCO=false;$('#main').onclick=null;$('#main').className='';document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b==e.target));V[k][1]()}};
 function login(){$('#app').hidden=true;$('#login').hidden=false}
 $('#lg').onclick=async()=>{try{await api('login',{method:'POST',body:{email:$('#em').value,password:$('#pw').value}});$('#login').hidden=true;$('#app').hidden=false;nav();dash()}catch{}};
-initDB().then(()=>{$('#app').hidden=false;nav();document.querySelector('nav button').classList.add('on');dash()}).catch(e=>alert('Archivio dati non disponibile in questo browser: '+e));
+initDB().then(async()=>{try{await autoDues()}catch{}$('#app').hidden=false;nav();document.querySelector('nav button').classList.add('on');dash()}).catch(e=>alert('Archivio dati non disponibile in questo browser: '+e));
 if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js');

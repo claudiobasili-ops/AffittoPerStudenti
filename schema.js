@@ -7,7 +7,7 @@ export const REQ = {apartments:['name','address','city'],rooms:['apartment_id','
  payments:['due_id','paid_on','amount'],expenses:['apartment_id','spent_on','period_from','period_to'],expense_types:['name'],share_payments:['share_id','paid_on','amount'],deposit_moves:['contract_id','kind','moved_on','amount']};
 export const NUM = ['prospect','income_monthly','income_months','purchase_price','purchase_costs','renovation','mortgage_payment','mortgage_interest','mortgage_principal','own_capital','rooms','beds','sqm','landlord_amount','monthly_rent','deposit','due_day','amount','cedolare','recurring'];
 export const FK = {tenants:[['contracts','tenant_id']],apartments:[['contracts','apartment_id'],['expenses','apartment_id']],expense_types:[['expenses','type_id']],rooms:[['contracts','room_id']]};
-export const CAS = {contracts:[['rent_dues','contract_id']],rent_dues:[['payments','due_id']],expenses:[['allocations','expense_id'],['documents','expense_id']],allocations:[['allocation_shares','allocation_id']],apartments:[['rooms','apartment_id']]};
+export const CAS = {tenants:[['documents','tenant_id']],contracts:[['rent_dues','contract_id'],['documents','contract_id']],rent_dues:[['payments','due_id']],expenses:[['allocations','expense_id'],['documents','expense_id']],allocations:[['allocation_shares','allocation_id']],apartments:[['rooms','apartment_id']]};
 export const R = {apartments:r=>r.name,tenants:r=>r.first_name+' '+r.last_name,expense_types:r=>r.name,rooms:r=>r.name};
 // Campo: [chiave, etichetta, tipo, 1 = solo nel modulo (non in griglia)]; tipo 'hd' = titolo di sezione del modulo, 'tog' = pulsante sì/no
 const A = ['apartment_id','Appartamento','ref:apartments'];

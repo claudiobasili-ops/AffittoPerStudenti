@@ -3,14 +3,14 @@ import { authToken, getSession, httpErr, newUid, sb } from './cloud-supabase.js'
 import { gm, sm } from './db.js';
 import { pdfDoc } from './lib-pdf.js';
 import { st } from './state.js';
-import { fd } from './util.js';
+import { fd, today } from './util.js';
 
 const WA_DEF = {enabled:false,from:'',prefix:'+39',mode:'free',contentSid:'',contentVars:'{"1":"{{nome}}","2":"{{periodo}}"}',mediaVar:'',text:'Ciao {{nome}}, ti invio il resoconto {{periodo}} per l’appartamento {{appartamento}}. Grazie!',confirm:true};
 export const WA_KEYS = [['twilio_account_sid','Account SID (inizia con AC…)'],['twilio_key_sid','API Key SID (inizia con SK…)'],['twilio_key_secret','API Key Secret']];
 export function normPhone(raw,prefix){let t=String(raw||'').trim().replace(/[\s().\-\/]/g,'');if(t.startsWith('00'))t='+'+t.slice(2);if(!t.startsWith('+')){const pf=String(prefix||'+39').trim();t=pf+t.replace(/^0+(?=\d{6,})/,pf=='+39'?'':'')}
  return/^\+[1-9]\d{7,14}$/.test(t)?t:null}
 const waFill = (tpl,v)=>String(tpl||'').replace(/\{\{(\w+)\}\}/g,(m,k)=>v[k]??'');
-function waVars(R){const t=R.tenant,p=R.p;return{nome:t?t.first_name:'',cognome:t?t.last_name:'',periodo:'dal '+fd(p.from)+' al '+fd(p.to),appartamento:R.apt||'(tutti)'}}
+function waVars(R){const t=R.tenant,p=R.p;return{nome:t?t.first_name:'',cognome:t?t.last_name:'',periodo:p.late?'dei ritardi al '+fd(today()):'dal '+fd(p.from)+' al '+fd(p.to),appartamento:R.apt||'(tutti)'}}
 export async function waLoad(s){let cfg=(await gm('waSet'))||null,sec=null,online=true;
  try{const r=await sb('/rest/v1/app_settings?select=data',{headers:{Accept:'application/json'}},s.at);if(!r.ok)throw await httpErr(r);const a=await r.json();if(a[0]){cfg=a[0].data;await sm('waSet',cfg)}
   const r2=await sb('/rest/v1/rpc/app_secret_status',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'},s.at);if(r2.ok)sec=await r2.json();else if(r2.status==404)sec={_missing:true}}
